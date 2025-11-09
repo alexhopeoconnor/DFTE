@@ -25,9 +25,6 @@
   "license": "MIT",
   "frameworks": "arduino",
   "platforms": ["espressif8266", "espressif32"],
-  "dependencies": {},
-  "export": {
-    "include": ["include"]
-  }
+  "dependencies": {}
 }
 
