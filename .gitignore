@@ -1,0 +1,24 @@
+# PlatformIO build artifacts
+.pio/
+.ccls-cache/
+.clangd/
+.cmake/
+cmake-build*/
+.pnpm-store/
+
+# VS Code / CLion configuration
+.vscode/
+.idea/
+
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Coverage / profiling
+*.gcda
+*.gcno
+*.gcov
+
+# Temporary files
+*.swp
+*.swo
