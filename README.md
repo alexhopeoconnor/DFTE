@@ -198,13 +198,18 @@ void setup() {
 2. Allocate a request-scoped `TemplateContext`, initialise it with the shared registry, and render inside the chunked callback.
 3. Tear everything down on completion or disconnect to avoid state bleed between clients.
 
-### Template Syntax Reference
+### Template Syntax
 
-- `%PLACEHOLDER%` – Register with `registerProgmemData`, `registerRamData`, or `registerProgmemTemplate`.
-- `%DYNAMIC%` – Pair with `registerDynamicTemplate` to supply template text and length at render time.
-- `%CONDITIONAL%` – Use `registerConditional` and return `TRUE_BRANCH`, `FALSE_BRANCH`, or `SKIP` from your evaluator.
-- `%ITERATOR%` – Register an `IteratorDescriptor` that opens, yields items via `IteratorItemView`, and closes when complete.
-- Nest templates freely; DFTE manages stack depth up to `DFTE_MAX_STACK_DEPTH_DEFAULT` by default.
+Every placeholder in a template uses `%NAME%`. DFTE looks up `NAME` in the registry and decides how to render it based on the registered type. Templates can be nested arbitrarily (up to `DFTE_MAX_STACK_DEPTH_DEFAULT` unless you raise it).
+
+### Placeholder Types
+
+- **Static data** – `registerProgmemData("%CSS%", PROGMEM_BLOCK)` streams literal content from flash or RAM.
+- **Nested template** – `registerProgmemTemplate("%HEADER%", HEADER_TEMPLATE)` injects another template that can contain its own placeholders.
+- **Dynamic value** – `registerRamData("%UPTIME%", getter)` calls a function that writes the current value into the output buffer.
+- **Dynamic template** – `registerDynamicTemplate("%CONTENT%", &DynamicTemplateDescriptor{getter, getLength, userData})` asks your getter to return template text at render time.
+- **Conditional** – `registerConditional("%IS_ONLINE%", &ConditionalDescriptor{evaluate, "%ONLINE%", "%OFFLINE%", userData})` chooses which delegate placeholder to render based on the evaluator result.
+- **Iterator** – `registerIterator("%SENSORS%", &IteratorDescriptor{open, next, close, userData})` opens a handle, streams each item template through `IteratorItemView`, and finalises with `close`.
 
 ### Buildable Examples
 
