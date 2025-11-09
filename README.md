@@ -54,13 +54,13 @@ DFTE is a lightweight C++ template engine tailored for Arduino-class hardware (E
 
 ## Why DFTE vs Alternatives?
 
-| Approach | Streaming-friendly | Live data injection | Flash reuse | Notes |
-|----------|-------------------|---------------------|-------------|-------|
-| DFTE (this library) | ✅ chunked writer with small buffers | ✅ registry-driven placeholders, iterators, conditionals | ✅ PROGMEM templates shared across requests | Designed for async HTTP and captive portals; minimal RAM usage |
-| Static SPIFFS/LittleFS files | ❌ requires full file read | ⚠️ must generate files ahead of time | ✅ stored once on flash filesystem | Great for pure static sites, awkward for live telemetry |
-| Arduino `String` concatenation | ❌ builds full payload in RAM | ✅ manual inserts | ❌ duplicates templates in firmware | Simple but fragments heap; under heavy usage causes resets |
-| AsyncWebServer template callback | ⚠️ per-placeholder string copies | ✅ but single-function spaghetti | ❌ no reuse between pages | Works for tiny pages; tough to maintain with real layouts |
-| Server-side proxy (external backend) | ✅ handled off-device | ✅ unlimited, but depends on network | ❌ device serves only proxy stub | Needs constant connectivity; adds infrastructure overhead |
+| Approach | Streaming | Dynamic data | Template reuse | Notes |
+|----------|-----------|--------------|---------------|-------|
+| DFTE (this library) | ✅ Streams in 128–512 byte chunks | ✅ Registry handles placeholders, conditionals, iterators | ✅ PROGMEM templates shared across requests | Built for async HTTP; keeps RAM usage predictable |
+| Static SPIFFS/LittleFS files | ❌ Full file send only | ⚠️ Requires pre-generated HTML | ✅ Stored once on flash filesystem | Great for static assets, not ideal for live telemetry |
+| Arduino `String` concatenation | ❌ Concatenates into one RAM buffer | ✅ Manual `String` inserts | ❌ Template duplicated per build | Fast to prototype but fragments heap on longer sketches |
+| AsyncWebServer template callback | ⚠️ Streams callback output but copies per placeholder | ✅ Values supplied in callback | ❌ No shared layout or nesting support | Fine for small pages; scales poorly with complex UIs |
+| Server-side proxy (external backend) | ✅ Offloaded to external service | ✅ Managed by backend | ❌ Device ships only proxy stub | Requires constant connectivity and extra infrastructure |
 
 ## Core Types & API
 - `PlaceholderRegistry`
