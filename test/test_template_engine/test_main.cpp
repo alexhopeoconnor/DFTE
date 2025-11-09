@@ -54,6 +54,8 @@ TestCase tests[] = {
     TEST_ENTRY(test_template_renderer_nested),
     TEST_ENTRY(test_template_renderer_nested_four_levels),
     TEST_ENTRY(test_template_renderer_nested_chunk_progress),
+    TEST_ENTRY(test_template_renderer_large_progmem_streaming),
+    TEST_ENTRY(test_template_renderer_large_progmem_nested_placeholders),
     TEST_ENTRY(test_template_renderer_large_templates),
     TEST_ENTRY(test_template_renderer_parallel_contexts),
     TEST_ENTRY(test_template_renderer_root_ram_template),

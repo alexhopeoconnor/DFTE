@@ -25,6 +25,8 @@ void test_template_renderer_placeholders();
 void test_template_renderer_nested();
 void test_template_renderer_nested_four_levels();
 void test_template_renderer_nested_chunk_progress();
+void test_template_renderer_large_progmem_streaming();
+void test_template_renderer_large_progmem_nested_placeholders();
 void test_template_renderer_large_templates();
 void test_template_renderer_parallel_contexts();
 void test_template_renderer_root_ram_template();

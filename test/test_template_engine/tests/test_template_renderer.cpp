@@ -2,9 +2,11 @@
 #include <Arduino.h>
 #include <TemplateEngine.h>
 #include <pgmspace.h>
+#include <array>
 #include "../templates/simple_templates.h"
 #include "../templates/placeholder_templates.h"
 #include "../templates/nested_templates.h"
+#include "../templates/large_templates.h"
 #include "../utils/test_utils.h"
 
 // Test RAM data getters
@@ -25,6 +27,193 @@ static const char* getTestHeap() { return testHeap.c_str(); }
 static const char* getTestUptime() { return testUptime.c_str(); }
 
 static const char PROGMEM simulated_logo_base64[] = "VEVTVF9MT0dPX0RBVEE=";
+
+struct ProgmemStreamProvider {
+    const char* data;
+    size_t length;
+    size_t offset;
+
+    ProgmemStreamProvider(const char* source, size_t len)
+        : data(source), length(len), offset(0) {}
+
+    bool next(char& out) {
+        if (offset >= length) {
+            return false;
+        }
+        out = static_cast<char>(pgm_read_byte(data + offset));
+        ++offset;
+        return true;
+    }
+
+    bool exhausted() const {
+        return offset == length;
+    }
+};
+
+template <size_t ChunkSize, typename Provider>
+static void renderTemplateWithProvider(const char* templateData, Provider& provider, size_t expectedSize, PlaceholderRegistry* registry = nullptr) {
+    TemplateContext ctx;
+    if (registry) {
+        ctx.setRegistry(registry);
+    }
+    TemplateRenderer::initializeContext(ctx, templateData);
+
+    std::array<uint8_t, ChunkSize> buffer{};
+    size_t total = 0;
+    size_t iterations = 0;
+
+    while (!TemplateRenderer::isComplete(ctx) && !ctx.hasError()) {
+        size_t written = TemplateRenderer::renderNextChunk(ctx, buffer.data(), buffer.size());
+        iterations++;
+        TEST_ASSERT_FALSE_MESSAGE(ctx.hasError(), "Template render encountered error");
+        TEST_ASSERT_TRUE_MESSAGE(written > 0 || TemplateRenderer::isComplete(ctx), "Template render stalled before completion");
+
+        for (size_t i = 0; i < written; ++i) {
+            char expectedChar = 0;
+            TEST_ASSERT_TRUE_MESSAGE(provider.next(expectedChar), "Expected stream shorter than renderer output");
+            TEST_ASSERT_EQUAL_UINT8_MESSAGE(expectedChar, buffer[i], "Rendered output mismatch");
+        }
+
+        total += written;
+    }
+
+    TEST_ASSERT_TRUE_MESSAGE(TemplateRenderer::isComplete(ctx), "Template render should complete");
+    TEST_ASSERT_FALSE_MESSAGE(ctx.hasError(), "Template render ended in error state");
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(static_cast<uint32_t>(expectedSize), static_cast<uint32_t>(total), "Rendered output length mismatch");
+    TEST_ASSERT_GREATER_THAN_MESSAGE(static_cast<unsigned int>(1), static_cast<unsigned int>(iterations), "Template render should require multiple iterations");
+    TEST_ASSERT_TRUE_MESSAGE(provider.exhausted(), "Expected stream still has data after renderer completion");
+}
+
+static constexpr char kLargeTemplateHeaderPrefix[] = "<!DOCTYPE html>";
+static constexpr char kLargeTemplateSnippetPrefix[] = "<section class=\"panel\">";
+static constexpr char kLargeTemplateSnippetKeyword[] = "Device Telemetry Summary";
+static constexpr char kLargePlaceholder32k[] = "%LARGE_TEMPLATE_32K%";
+static constexpr char kLargePlaceholder64k[] = "%LARGE_TEMPLATE_64K%";
+static constexpr char kLargePlaceholder128k[] = "%LARGE_TEMPLATE_128K%";
+static const char PROGMEM large_nested_root_template[] =
+    "BEGIN\n"
+    "%LARGE_TEMPLATE_32K%\n"
+    "MIDDLE\n"
+    "%LARGE_TEMPLATE_64K%\n"
+    "END\n"
+    "%LARGE_TEMPLATE_128K%\n"
+    "DONE";
+
+class CompositeExpectedProvider {
+public:
+    CompositeExpectedProvider()
+        : section(Section::PrefixBeforeFirst), offset(0), consumed(0) {}
+
+    bool next(char& out) {
+        while (true) {
+            switch (section) {
+                case Section::PrefixBeforeFirst:
+                    if (offset < prefixBeforeFirstLength()) {
+                        out = prefixBeforeFirstLiteral()[offset++];
+                        ++consumed;
+                        return true;
+                    }
+                    section = Section::Large32;
+                    offset = 0;
+                    continue;
+                case Section::Large32:
+                    if (offset < dfte::test_data::large_template_32k_size) {
+                        out = static_cast<char>(pgm_read_byte(dfte::test_data::large_template_32k + offset++));
+                        ++consumed;
+                        return true;
+                    }
+                    section = Section::Between32And64;
+                    offset = 0;
+                    continue;
+                case Section::Between32And64:
+                    if (offset < between32And64Length()) {
+                        out = between32And64Literal()[offset++];
+                        ++consumed;
+                        return true;
+                    }
+                    section = Section::Large64;
+                    offset = 0;
+                    continue;
+                case Section::Large64:
+                    if (offset < dfte::test_data::large_template_64k_size) {
+                        out = static_cast<char>(pgm_read_byte(dfte::test_data::large_template_64k + offset++));
+                        ++consumed;
+                        return true;
+                    }
+                    section = Section::Between64And128;
+                    offset = 0;
+                    continue;
+                case Section::Between64And128:
+                    if (offset < between64And128Length()) {
+                        out = between64And128Literal()[offset++];
+                        ++consumed;
+                        return true;
+                    }
+                    section = Section::Large128;
+                    offset = 0;
+                    continue;
+                case Section::Large128:
+                    if (offset < dfte::test_data::large_template_128k_size) {
+                        out = static_cast<char>(pgm_read_byte(dfte::test_data::large_template_128k + offset++));
+                        ++consumed;
+                        return true;
+                    }
+                    section = Section::Suffix;
+                    offset = 0;
+                    continue;
+                case Section::Suffix:
+                    if (offset < suffixLength()) {
+                        out = suffixLiteral()[offset++];
+                        ++consumed;
+                        return true;
+                    }
+                    section = Section::Complete;
+                    offset = 0;
+                    return false;
+                case Section::Complete:
+                    return false;
+            }
+        }
+    }
+
+    bool exhausted() const {
+        return consumed == expectedSize();
+    }
+
+    size_t expectedSize() const {
+        return prefixBeforeFirstLength() + dfte::test_data::large_template_32k_size +
+               between32And64Length() + dfte::test_data::large_template_64k_size +
+               between64And128Length() + dfte::test_data::large_template_128k_size +
+               suffixLength();
+    }
+
+private:
+    enum class Section {
+        PrefixBeforeFirst,
+        Large32,
+        Between32And64,
+        Large64,
+        Between64And128,
+        Large128,
+        Suffix,
+        Complete
+    };
+
+    Section section;
+    size_t offset;
+    size_t consumed;
+
+    static constexpr const char* prefixBeforeFirstLiteral() { return "BEGIN\n"; }
+    static constexpr const char* between32And64Literal() { return "\nMIDDLE\n"; }
+    static constexpr const char* between64And128Literal() { return "\nEND\n"; }
+    static constexpr const char* suffixLiteral() { return "\nDONE"; }
+
+    static constexpr size_t prefixBeforeFirstLength() { return sizeof("BEGIN\n") - 1; }
+    static constexpr size_t between32And64Length() { return sizeof("\nMIDDLE\n") - 1; }
+    static constexpr size_t between64And128Length() { return sizeof("\nEND\n") - 1; }
+    static constexpr size_t suffixLength() { return sizeof("\nDONE") - 1; }
+};
+
 static const char ram_root_template[] = "Status: %TITLE%";
 static const char ram_root_text_only[] = "RAM root template";
 
@@ -704,6 +893,75 @@ void test_template_renderer_nested_chunk_progress() {
     TEST_ASSERT_TRUE_MESSAGE(TemplateRenderer::isComplete(ctx), "Nested render should complete");
     TEST_ASSERT_TRUE_MESSAGE(rendered.indexOf("Outer:") >= 0, "Rendered string should include outer text");
     TEST_ASSERT_TRUE_MESSAGE(rendered.indexOf("Deep content") >= 0, "Rendered string should include deepest content");
+}
+
+template <size_t ChunkSize>
+static void renderLargeTemplateAndValidate(const char* templateData, size_t expectedSize, size_t expectedRepeats) {
+    const size_t headerLen = dfte::test_data::large_template_header_length;
+    const size_t snippetLen = dfte::test_data::large_template_snippet_length;
+    const size_t footerLen = dfte::test_data::large_template_footer_length;
+
+    TEST_ASSERT_TRUE_MESSAGE(expectedSize >= headerLen + footerLen, "Large template smaller than framing sections");
+    const size_t bodySize = expectedSize - headerLen - footerLen;
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(0, bodySize % snippetLen, "Large template body length should align with snippet length");
+    const size_t repeatCount = snippetLen == 0 ? 0 : bodySize / snippetLen;
+    TEST_ASSERT_EQUAL_UINT_MESSAGE(expectedRepeats, repeatCount, "Large template repeat count mismatch");
+
+    ProgmemStreamProvider provider(templateData, expectedSize);
+    renderTemplateWithProvider<ChunkSize>(templateData, provider, expectedSize);
+
+    auto matchesPrefix = [&](size_t offset, const char* literal, size_t literalLen) {
+        for (size_t i = 0; i < literalLen; ++i) {
+            if (pgm_read_byte(templateData + offset + i) != literal[i]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    TEST_ASSERT_TRUE_MESSAGE(matchesPrefix(0, kLargeTemplateHeaderPrefix, sizeof(kLargeTemplateHeaderPrefix) - 1), "Large template should start with HTML doctype");
+    TEST_ASSERT_TRUE_MESSAGE(matchesPrefix(headerLen, kLargeTemplateSnippetPrefix, sizeof(kLargeTemplateSnippetPrefix) - 1), "Large template should include panel section prefix after header");
+
+    auto snippetContainsKeyword = [&](const char* keyword, size_t keywordLen) {
+        if (keywordLen == 0 || snippetLen < keywordLen) {
+            return false;
+        }
+        for (size_t offset = 0; offset + keywordLen <= snippetLen; ++offset) {
+            bool match = true;
+            for (size_t j = 0; j < keywordLen; ++j) {
+                if (pgm_read_byte(templateData + headerLen + offset + j) != keyword[j]) {
+                    match = false;
+                    break;
+                }
+            }
+            if (match) {
+                return true;
+            }
+        }
+        return false;
+    };
+
+    TEST_ASSERT_TRUE_MESSAGE(snippetContainsKeyword(kLargeTemplateSnippetKeyword, sizeof(kLargeTemplateSnippetKeyword) - 1), "Large template snippet should include telemetry keyword");
+}
+
+void test_template_renderer_large_progmem_streaming() {
+    Serial.println("[TEST:test_template_renderer_large_progmem_streaming]   Streaming large PROGMEM templates...");
+    renderLargeTemplateAndValidate<512>(dfte::test_data::large_template_32k, dfte::test_data::large_template_32k_size, dfte::test_data::large_template_32k_repeats);
+    renderLargeTemplateAndValidate<512>(dfte::test_data::large_template_64k, dfte::test_data::large_template_64k_size, dfte::test_data::large_template_64k_repeats);
+    renderLargeTemplateAndValidate<512>(dfte::test_data::large_template_128k, dfte::test_data::large_template_128k_size, dfte::test_data::large_template_128k_repeats);
+}
+
+void test_template_renderer_large_progmem_nested_placeholders() {
+    Serial.println("[TEST:test_template_renderer_large_progmem_nested_placeholders]   Streaming nested large PROGMEM placeholders...");
+
+    PlaceholderRegistry registry(6);
+    TEST_ASSERT_TRUE_MESSAGE(registry.registerProgmemTemplate(kLargePlaceholder32k, dfte::test_data::large_template_32k), "Should register 32K template placeholder");
+    TEST_ASSERT_TRUE_MESSAGE(registry.registerProgmemTemplate(kLargePlaceholder64k, dfte::test_data::large_template_64k), "Should register 64K template placeholder");
+    TEST_ASSERT_TRUE_MESSAGE(registry.registerProgmemTemplate(kLargePlaceholder128k, dfte::test_data::large_template_128k), "Should register 128K template placeholder");
+
+    CompositeExpectedProvider provider;
+    const size_t expectedSize = provider.expectedSize();
+    renderTemplateWithProvider<512>(large_nested_root_template, provider, expectedSize, &registry);
 }
 
 void test_template_renderer_large_templates() {
