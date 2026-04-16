@@ -26,8 +26,18 @@ void test_edge_cases_error_handling() {
     TemplateContext ctx;
     ctx.setRegistry(&registry);
     
-    // Test render with null template pointer (should handle gracefully)
-    // Note: initializeContext expects valid PROGMEM pointer, so we'll test with empty template
+    // Test render with null template pointer (should enter error cleanly)
+    TemplateRenderer::initializeContext(ctx, nullptr, false);
+    TEST_ASSERT_TRUE_MESSAGE(ctx.hasError(),
+        "Null template pointer should set context to error");
+    uint8_t nullBuffer[8];
+    size_t nullWritten = TemplateRenderer::renderNextChunk(ctx, nullBuffer, sizeof(nullBuffer));
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(0u, static_cast<uint32_t>(nullWritten),
+        "Null template render should produce no output");
+
+    // Test render with empty template
+    ctx.reset();
+    ctx.setRegistry(&registry);
     TemplateRenderer::initializeContext(ctx, empty_template);
     String result1 = captureRenderedOutput(ctx);
     TEST_ASSERT_EQUAL_STRING_MESSAGE("", result1.c_str(), 

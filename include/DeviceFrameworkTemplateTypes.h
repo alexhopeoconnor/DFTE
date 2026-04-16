@@ -87,11 +87,15 @@ struct PlaceholderEntry {
     PlaceholderType type;
     const void* data;
     PlaceholderLengthGetter getLength;
+    size_t cachedLength;
+    bool hasCachedLength;
     
     PlaceholderEntry() 
         : type(PlaceholderType::RAM_DATA), 
           data(nullptr), 
-          getLength(nullptr) {
+          getLength(nullptr),
+          cachedLength(0),
+          hasCachedLength(false) {
         name[0] = '\0';
     }
 };

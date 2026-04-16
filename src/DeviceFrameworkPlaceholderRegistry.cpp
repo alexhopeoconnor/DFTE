@@ -1,11 +1,26 @@
 #include "DeviceFrameworkPlaceholderRegistry.h"
 #include "DeviceFrameworkTemplateEngineDebug.h"
 #include <pgmspace.h>
+#include <new>
 
 DeviceFrameworkPlaceholderRegistry::DeviceFrameworkPlaceholderRegistry(uint16_t maxPlaceholders) 
-    : maxPlaceholders(maxPlaceholders), count(0) {
-    placeholders = new PlaceholderEntry[maxPlaceholders];
-    memset(placeholders, 0, sizeof(PlaceholderEntry) * maxPlaceholders);
+    : placeholders(nullptr), maxPlaceholders(maxPlaceholders), count(0) {
+    if (maxPlaceholders == 0) {
+        DFTE_LOG_ERROR("Placeholder registry size cannot be zero");
+        this->maxPlaceholders = 0;
+        return;
+    }
+
+    placeholders = new (std::nothrow) PlaceholderEntry[maxPlaceholders];
+    if (placeholders == nullptr) {
+        DFTE_LOG_ERROR("Failed to allocate placeholder registry");
+        this->maxPlaceholders = 0;
+        return;
+    }
+
+    for (uint16_t i = 0; i < maxPlaceholders; ++i) {
+        placeholders[i] = PlaceholderEntry();
+    }
 }
 
 DeviceFrameworkPlaceholderRegistry::~DeviceFrameworkPlaceholderRegistry() {
@@ -16,6 +31,11 @@ DeviceFrameworkPlaceholderRegistry::~DeviceFrameworkPlaceholderRegistry() {
 }
 
 bool DeviceFrameworkPlaceholderRegistry::registerProgmemData(const char* name, const char* progmemData) {
+    if (placeholders == nullptr || maxPlaceholders == 0) {
+        DFTE_LOG_ERROR("Placeholder registry not initialized");
+        return false;
+    }
+
     if (count >= maxPlaceholders) {
         DFTE_LOG_ERROR("Placeholder registry full, cannot register: " + String(name));
         return false;
@@ -37,12 +57,19 @@ bool DeviceFrameworkPlaceholderRegistry::registerProgmemData(const char* name, c
     entry.type = PlaceholderType::PROGMEM_DATA;
     entry.data = progmemData;
     entry.getLength = getProgmemLength;
+    entry.cachedLength = getProgmemLength(progmemData);
+    entry.hasCachedLength = true;
     
     count++;
     return true;
 }
 
 bool DeviceFrameworkPlaceholderRegistry::registerProgmemTemplate(const char* name, const char* progmemTemplate) {
+    if (placeholders == nullptr || maxPlaceholders == 0) {
+        DFTE_LOG_ERROR("Placeholder registry not initialized");
+        return false;
+    }
+
     if (count >= maxPlaceholders) {
         DFTE_LOG_ERROR("Placeholder registry full, cannot register: " + String(name));
         return false;
@@ -58,12 +85,19 @@ bool DeviceFrameworkPlaceholderRegistry::registerProgmemTemplate(const char* nam
     entry.type = PlaceholderType::PROGMEM_TEMPLATE;
     entry.data = progmemTemplate;
     entry.getLength = getProgmemLength;
+    entry.cachedLength = getProgmemLength(progmemTemplate);
+    entry.hasCachedLength = true;
     
     count++;
     return true;
 }
 
 bool DeviceFrameworkPlaceholderRegistry::registerRamData(const char* name, PlaceholderDataGetter getter) {
+    if (placeholders == nullptr || maxPlaceholders == 0) {
+        DFTE_LOG_ERROR("Placeholder registry not initialized");
+        return false;
+    }
+
     if (count >= maxPlaceholders) {
         DFTE_LOG_ERROR("Placeholder registry full, cannot register: " + String(name));
         return false;
@@ -84,12 +118,19 @@ bool DeviceFrameworkPlaceholderRegistry::registerRamData(const char* name, Place
     entry.type = PlaceholderType::RAM_DATA;
     entry.data = (const void*)getter;
     entry.getLength = getRamLength;
+    entry.cachedLength = 0;
+    entry.hasCachedLength = false;
     
     count++;
     return true;
 }
 
 bool DeviceFrameworkPlaceholderRegistry::registerDynamicTemplate(const char* name, const DynamicTemplateDescriptor* descriptor) {
+    if (placeholders == nullptr || maxPlaceholders == 0) {
+        DFTE_LOG_ERROR("Placeholder registry not initialized");
+        return false;
+    }
+
     if (count >= maxPlaceholders) {
         DFTE_LOG_ERROR("Placeholder registry full, cannot register: " + String(name));
         return false;
@@ -110,12 +151,19 @@ bool DeviceFrameworkPlaceholderRegistry::registerDynamicTemplate(const char* nam
     entry.type = PlaceholderType::DYNAMIC_TEMPLATE;
     entry.data = descriptor;
     entry.getLength = nullptr;
+    entry.cachedLength = 0;
+    entry.hasCachedLength = false;
 
     count++;
     return true;
 }
 
 bool DeviceFrameworkPlaceholderRegistry::registerConditional(const char* name, const ConditionalDescriptor* descriptor) {
+    if (placeholders == nullptr || maxPlaceholders == 0) {
+        DFTE_LOG_ERROR("Placeholder registry not initialized");
+        return false;
+    }
+
     if (count >= maxPlaceholders) {
         DFTE_LOG_ERROR("Placeholder registry full, cannot register: " + String(name));
         return false;
@@ -136,12 +184,19 @@ bool DeviceFrameworkPlaceholderRegistry::registerConditional(const char* name, c
     entry.type = PlaceholderType::CONDITIONAL;
     entry.data = descriptor;
     entry.getLength = nullptr;
+    entry.cachedLength = 0;
+    entry.hasCachedLength = false;
 
     count++;
     return true;
 }
 
 bool DeviceFrameworkPlaceholderRegistry::registerIterator(const char* name, const IteratorDescriptor* descriptor) {
+    if (placeholders == nullptr || maxPlaceholders == 0) {
+        DFTE_LOG_ERROR("Placeholder registry not initialized");
+        return false;
+    }
+
     if (count >= maxPlaceholders) {
         DFTE_LOG_ERROR("Placeholder registry full, cannot register: " + String(name));
         return false;
@@ -162,6 +217,8 @@ bool DeviceFrameworkPlaceholderRegistry::registerIterator(const char* name, cons
     entry.type = PlaceholderType::ITERATOR;
     entry.data = descriptor;
     entry.getLength = nullptr;
+    entry.cachedLength = 0;
+    entry.hasCachedLength = false;
 
     count++;
     return true;
@@ -169,7 +226,13 @@ bool DeviceFrameworkPlaceholderRegistry::registerIterator(const char* name, cons
 
 void DeviceFrameworkPlaceholderRegistry::clear() {
     count = 0;
-    memset(placeholders, 0, sizeof(PlaceholderEntry) * maxPlaceholders);
+    if (placeholders == nullptr || maxPlaceholders == 0) {
+        return;
+    }
+
+    for (uint16_t i = 0; i < maxPlaceholders; ++i) {
+        placeholders[i] = PlaceholderEntry();
+    }
 }
 
 bool DeviceFrameworkPlaceholderRegistry::validatePlaceholderName(const char* name) const {
@@ -194,7 +257,7 @@ bool DeviceFrameworkPlaceholderRegistry::validatePlaceholderName(const char* nam
 }
 
 const PlaceholderEntry* DeviceFrameworkPlaceholderRegistry::getPlaceholder(const char* name) const {
-    if (name == nullptr) return nullptr;
+    if (name == nullptr || placeholders == nullptr || count <= 0) return nullptr;
     
     for (int i = count - 1; i >= 0; i--) {
         if (strcmp(placeholders[i].name, name) == 0) {
@@ -206,14 +269,29 @@ const PlaceholderEntry* DeviceFrameworkPlaceholderRegistry::getPlaceholder(const
 
 size_t DeviceFrameworkPlaceholderRegistry::renderPlaceholder(const PlaceholderEntry* entry, size_t offset, 
                                              uint8_t* buffer, size_t maxLen) const {
-    if (entry == nullptr || maxLen == 0) {
+    if (entry == nullptr || buffer == nullptr || maxLen == 0) {
         return 0;
     }
     
     switch (entry->type) {
         case PlaceholderType::PROGMEM_DATA:
-        case PlaceholderType::PROGMEM_TEMPLATE:
-            return copyProgmemData((const char*)entry->data, offset, buffer, maxLen);
+        case PlaceholderType::PROGMEM_TEMPLATE: {
+            const char* data = static_cast<const char*>(entry->data);
+            if (data == nullptr) {
+                return 0;
+            }
+
+            size_t dataLen = entry->hasCachedLength ? entry->cachedLength : getProgmemLength(entry->data);
+            if (offset >= dataLen) {
+                return 0;
+            }
+
+            size_t remaining = dataLen - offset;
+            constexpr size_t MAX_CHUNK = DFTE_PROGMEM_CHUNK_SIZE;
+            size_t chunkSize = min(min(maxLen, remaining), MAX_CHUNK);
+            memcpy_P(buffer, data + offset, chunkSize);
+            return chunkSize;
+        }
             
         case PlaceholderType::RAM_DATA:
             return copyRamData((PlaceholderDataGetter)entry->data, offset, buffer, maxLen);

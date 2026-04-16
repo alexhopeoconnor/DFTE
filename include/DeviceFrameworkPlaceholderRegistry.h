@@ -127,7 +127,7 @@ public:
     static size_t getDynamicTemplateLength(const DynamicTemplateDescriptor* descriptor, const char* templateData);
     
 private:
-    static constexpr uint16_t MAX_PLACEHOLDER_NAME_SIZE = DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT;
+    static constexpr uint16_t MAX_PLACEHOLDER_NAME_SIZE = DFTE_PLACEHOLDER_NAME_SIZE;
     
     PlaceholderEntry* placeholders;  // Dynamically allocated array
     uint16_t maxPlaceholders;        // Configurable size

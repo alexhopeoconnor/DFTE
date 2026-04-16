@@ -30,11 +30,11 @@ DFTE is a lightweight C++ template engine tailored for Arduino-class hardware (E
      Serial.begin(115200);
 
      registry.registerProgmemData(PSTR("%APP_TITLE%"), PSTR("DFTE Quickstart"));
-     registry.registerRamData(PSTR("%UPTIME%"), [](PlaceholderWriter& w) {
-       static char buffer[16];
-       snprintf(buffer, sizeof(buffer), "%lus", millis() / 1000);
-       w.write(buffer);
-     });
+     registry.registerRamData(PSTR("%UPTIME%"), []() -> const char* {
+      static char buffer[16];
+      snprintf(buffer, sizeof(buffer), "%lus", millis() / 1000);
+      return buffer;
+    });
      registry.registerProgmemTemplate(PSTR("%ROOT%"), ROOT_TEMPLATE_PROGMEM);
 
      ctx.setRegistry(&registry);
@@ -100,11 +100,11 @@ All public headers are re-exported from `TemplateEngine.h`, so typical sketches 
    ```
    PlaceholderRegistry registry;
    registry.registerProgmemData(PSTR("%APP_TITLE%"), PSTR("DFTE Dashboard"));
-   registry.registerRamData(PSTR("%UPTIME%"), [](PlaceholderWriter& w) {
-     static char buffer[16];
-     snprintf(buffer, sizeof(buffer), "%lus", millis() / 1000);
-     w.write(buffer);
-   });
+   registry.registerRamData(PSTR("%UPTIME%"), []() -> const char* {
+    static char buffer[16];
+    snprintf(buffer, sizeof(buffer), "%lus", millis() / 1000);
+    return buffer;
+  });
    registry.registerProgmemTemplate(PSTR("%ROOT%"), ROOT_TEMPLATE_PROGMEM);
    ```
 
@@ -149,10 +149,10 @@ std::shared_ptr<PlaceholderRegistry> registry;
 void setupRegistry() {
   registry = std::make_shared<PlaceholderRegistry>();
   registry->registerProgmemData(PSTR("%APP_TITLE%"), PSTR("DFTE Async Portal"));
-  registry->registerRamData(PSTR("%UPTIME%"), [](PlaceholderWriter& w) {
+  registry->registerRamData(PSTR("%UPTIME%"), []() -> const char* {
     static char buffer[16];
     snprintf(buffer, sizeof(buffer), "%lus", millis() / 1000);
-    w.write(buffer);
+    return buffer;
   });
   registry->registerProgmemTemplate(PSTR("%ROOT%"), ROOT_TEMPLATE_PROGMEM);
 }
@@ -206,7 +206,7 @@ Every placeholder in a template uses `%NAME%`. DFTE looks up `NAME` in the regis
 
 - **Static data** – `registerProgmemData("%CSS%", PROGMEM_BLOCK)` streams literal content from flash or RAM.
 - **Nested template** – `registerProgmemTemplate("%HEADER%", HEADER_TEMPLATE)` injects another template that can contain its own placeholders.
-- **Dynamic value** – `registerRamData("%UPTIME%", getter)` calls a function that writes the current value into the output buffer.
+- **Dynamic value** – `registerRamData("%UPTIME%", getter)` calls a function that returns the current value as a `const char*`.
 - **Dynamic template** – `registerDynamicTemplate("%CONTENT%", &DynamicTemplateDescriptor{getter, getLength, userData})` asks your getter to return template text at render time.
 - **Conditional** – `registerConditional("%IS_ONLINE%", &ConditionalDescriptor{evaluate, "%ONLINE%", "%OFFLINE%", userData})` chooses which delegate placeholder to render based on the evaluator result.
 - **Iterator** – `registerIterator("%SENSORS%", &IteratorDescriptor{open, next, close, userData})` opens a handle, streams each item template through `IteratorItemView`, and finalises with `close`.

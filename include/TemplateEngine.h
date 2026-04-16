@@ -44,12 +44,5 @@ using TemplateRenderer = DeviceFrameworkTemplateRenderer;
 using TemplateContext = DeviceFrameworkTemplateContext;
 using PlaceholderRegistry = DeviceFrameworkPlaceholderRegistry;
 
-// Use new type names
-using PlaceholderType = PlaceholderType;
-using PlaceholderEntry = PlaceholderEntry;
-using RenderingContextType = RenderingContextType;
-using RenderingContext = RenderingContext;
-using TemplateRenderState = TemplateRenderState;
-
 #endif // TEMPLATE_ENGINE_H
 

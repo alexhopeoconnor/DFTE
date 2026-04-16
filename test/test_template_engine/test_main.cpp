@@ -68,10 +68,12 @@ TestCase tests[] = {
     TEST_ENTRY(test_template_renderer_conditional_skip),
     TEST_ENTRY(test_template_renderer_conditional_missing_delegate),
     TEST_ENTRY(test_template_renderer_conditional_nested_iterator),
+    TEST_ENTRY(test_template_renderer_conditional_template_delegate_completes),
     TEST_ENTRY(test_template_renderer_iterator_basic),
     TEST_ENTRY(test_template_renderer_iterator_empty),
     TEST_ENTRY(test_template_renderer_iterator_dynamic_items),
     TEST_ENTRY(test_template_renderer_iterator_error_cleanup),
+    TEST_ENTRY(test_template_renderer_iterator_stall_guard),
     
     // Group 4: Integration Tests
     TEST_ENTRY(test_integration_full_rendering),

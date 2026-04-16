@@ -704,8 +704,21 @@ DeviceFrameworkTemplateRenderer::RenderOutcome DeviceFrameworkTemplateRenderer::
         case RenderingContextType::PLACEHOLDER_DYNAMIC_TEMPLATE:
             return makeState(TemplateRenderState::TEXT, true);
 
-        case RenderingContextType::PLACEHOLDER_CONDITIONAL:
-            return makeState(TemplateRenderState::RENDERING_CONTEXT, true);
+        case RenderingContextType::PLACEHOLDER_CONDITIONAL: {
+            RenderOutcome outcome = makeState(TemplateRenderState::RENDERING_CONTEXT, true);
+            outcome.popCount = 1;
+
+            RenderingContext* parent = (ctx.renderingDepth > 1) ? ctx.getContext(ctx.renderingDepth - 2) : nullptr;
+            if (!parent) {
+                outcome.nextState = TemplateRenderState::COMPLETE;
+                outcome.repeat = false;
+                outcome.finished = true;
+            } else if (parent->type == RenderingContextType::TEMPLATE) {
+                outcome.nextState = TemplateRenderState::TEXT;
+            }
+
+            return outcome;
+        }
 
         case RenderingContextType::PLACEHOLDER_ITERATOR:
             return processIteratorContext(ctx, currentCtx);
@@ -747,7 +760,16 @@ DeviceFrameworkTemplateRenderer::RenderOutcome DeviceFrameworkTemplateRenderer::
         return outcome;
     }
 
-    size_t totalLength = entry->getLength(entry->data);
+    size_t totalLength = 0;
+    if (entry->hasCachedLength) {
+        totalLength = entry->cachedLength;
+    } else if (entry->getLength != nullptr) {
+        totalLength = entry->getLength(entry->data);
+    } else {
+        DFTE_LOG_ERROR("Placeholder '" + String(entry->name) + "' missing length getter");
+        return makeError();
+    }
+
     if (dataCtx.offset >= totalLength) {
         RenderOutcome outcome = makeState(TemplateRenderState::RENDERING_CONTEXT, true);
         outcome.popCount = 1;
@@ -799,11 +821,19 @@ size_t DeviceFrameworkTemplateRenderer::renderNextChunk(DeviceFrameworkTemplateC
 
     size_t written = 0;
     size_t iterations = 0;
+    size_t consecutiveNoProgressIterations = 0;
     uint8_t* writePtr = buffer;
     size_t remaining = maxLen;
 
     while (remaining > 0 && !ctx.isComplete() && !ctx.hasError() && iterations < MAX_ITERATIONS) {
         RenderOutcome outcome = renderChunk(ctx, writePtr, remaining);
+
+        bool noProgressIteration = (outcome.bytesWritten == 0 && outcome.repeat && !outcome.finished && !outcome.errored);
+        if (noProgressIteration) {
+            consecutiveNoProgressIterations++;
+        } else {
+            consecutiveNoProgressIterations = 0;
+        }
 
         written += outcome.bytesWritten;
         ctx.totalBytesProcessed += outcome.bytesWritten;
@@ -822,6 +852,9 @@ size_t DeviceFrameworkTemplateRenderer::renderNextChunk(DeviceFrameworkTemplateC
 
     if (iterations >= MAX_ITERATIONS) {
         DFTE_LOG_WARN("Maximum iterations reached in renderNextChunk");
+        if (consecutiveNoProgressIterations >= 3 && !ctx.isComplete() && !ctx.hasError()) {
+            ctx.state = TemplateRenderState::ERROR;
+        }
     }
 
     return written;
@@ -833,6 +866,12 @@ void DeviceFrameworkTemplateRenderer::initializeContext(DeviceFrameworkTemplateC
 
 void DeviceFrameworkTemplateRenderer::initializeContext(DeviceFrameworkTemplateContext& ctx, const char* templateData, bool templateInProgmem) {
     ctx.reset();
+
+    if (templateData == nullptr) {
+        DFTE_LOG_ERROR("initializeContext called with null template pointer");
+        ctx.state = TemplateRenderState::ERROR;
+        return;
+    }
     
     // Push initial template context
     if (!ctx.pushContext(RenderingContextType::TEMPLATE, "ROOT")) {

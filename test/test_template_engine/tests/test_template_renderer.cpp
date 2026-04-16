@@ -273,6 +273,13 @@ static ConditionalDescriptor iteratorConditionalDescriptor = {
     &conditionalState
 };
 
+static ConditionalDescriptor conditionalTemplateDescriptor = {
+    evaluateConditionalState,
+    "%COND_TMPL_TRUE%",
+    "%COND_TMPL_FALSE%",
+    &conditionalState
+};
+
 struct WifiIteratorState {
     size_t index;
     size_t count;
@@ -408,6 +415,49 @@ static const char PROGMEM conditionalWrapperTemplate[] = "Status:%STATUS_BLOCK%:
 static const char PROGMEM conditionalSkipTemplate[] = "Value[%STATUS_BLOCK%]";
 static const char PROGMEM iteratorWrapperTemplate[] = "<ul>%WIFI_LIST%</ul>";
 static const char PROGMEM iteratorConditionalWrapperTemplate[] = "Badge:<ul>%WIFI_BADGE%</ul>";
+static const char PROGMEM conditionalTemplateWrapperTemplate[] = "Cond:%COND_TMPL_BLOCK%:Done";
+static const char PROGMEM conditionalTemplateTrueTemplate[] = "<span>Delegate True</span>";
+static const char PROGMEM conditionalTemplateFalseTemplate[] = "<span>Delegate False</span>";
+static const char PROGMEM stalledIteratorWrapperTemplate[] = "Start:%STALLING_LIST%:End";
+
+struct StalledIteratorState {
+    size_t calls;
+};
+
+static StalledIteratorState stalledIteratorState;
+
+static void* stalledIteratorOpen(void* userData) {
+    StalledIteratorState* state = static_cast<StalledIteratorState*>(userData);
+    if (state) {
+        state->calls = 0;
+    }
+    return state;
+}
+
+static IteratorStepResult stalledIteratorNext(void* handle, IteratorItemView& view) {
+    StalledIteratorState* state = static_cast<StalledIteratorState*>(handle);
+    if (state) {
+        state->calls++;
+    }
+
+    view.templateData = nullptr;
+    view.templateLength = 0;
+    view.templateIsProgmem = false;
+    view.placeholders = nullptr;
+    view.placeholderCount = 0;
+    return IteratorStepResult::ITEM_READY;
+}
+
+static void stalledIteratorClose(void* handle) {
+    (void)handle;
+}
+
+static IteratorDescriptor stalledIteratorDescriptor = {
+    stalledIteratorOpen,
+    stalledIteratorNext,
+    stalledIteratorClose,
+    &stalledIteratorState
+};
 
 // Test TemplateRenderer basic rendering
 void test_template_renderer_basic() {
@@ -1222,9 +1272,29 @@ void test_template_renderer_conditional_nested_iterator() {
     ctx.setRegistry(&registry);
     TemplateRenderer::initializeContext(ctx, iteratorConditionalWrapperTemplate);
     String rendered = captureRenderedOutput(ctx, 64);
+    TEST_ASSERT_TRUE_MESSAGE(TemplateRenderer::isComplete(ctx), "Conditional iterator render should complete");
+    TEST_ASSERT_FALSE_MESSAGE(ctx.hasError(), "Conditional iterator render should not error");
     TEST_ASSERT_TRUE_MESSAGE(rendered.indexOf("Net-A") >= 0, "Iterator content should appear inside conditional");
     TEST_ASSERT_TRUE_MESSAGE(rendered.indexOf("Net-B") >= 0, "Iterator should render second item");
     TEST_ASSERT_TRUE_MESSAGE(rendered.indexOf("Net-C") >= 0, "Iterator should render third item");
+}
+
+void test_template_renderer_conditional_template_delegate_completes() {
+    PlaceholderRegistry registry(8);
+    TEST_ASSERT_TRUE_MESSAGE(registry.registerProgmemTemplate("%COND_TMPL_TRUE%", conditionalTemplateTrueTemplate), "Conditional true template should register");
+    TEST_ASSERT_TRUE_MESSAGE(registry.registerProgmemTemplate("%COND_TMPL_FALSE%", conditionalTemplateFalseTemplate), "Conditional false template should register");
+
+    conditionalState.result = ConditionalBranchResult::TRUE_BRANCH;
+    TEST_ASSERT_TRUE_MESSAGE(registry.registerConditional("%COND_TMPL_BLOCK%", &conditionalTemplateDescriptor), "Conditional template placeholder should register");
+
+    TemplateContext ctx;
+    ctx.setRegistry(&registry);
+    TemplateRenderer::initializeContext(ctx, conditionalTemplateWrapperTemplate);
+    String rendered = captureRenderedOutput(ctx, 8);
+
+    TEST_ASSERT_TRUE_MESSAGE(TemplateRenderer::isComplete(ctx), "Conditional template delegate should complete");
+    TEST_ASSERT_FALSE_MESSAGE(ctx.hasError(), "Conditional template delegate should not error");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("Cond:<span>Delegate True</span>:Done", rendered.c_str(), "Conditional template delegate should render full branch content");
 }
 
 void test_template_renderer_iterator_basic() {
@@ -1289,5 +1359,22 @@ void test_template_renderer_iterator_error_cleanup() {
 
     TEST_ASSERT_TRUE_MESSAGE(ctx.hasError(), "Iterator error should propagate to context");
     TEST_ASSERT_TRUE_MESSAGE(wifiIteratorState.closeCalled, "Iterator close should run on error");
+}
+
+void test_template_renderer_iterator_stall_guard() {
+    PlaceholderRegistry registry(4);
+    stalledIteratorState.calls = 0;
+    TEST_ASSERT_TRUE_MESSAGE(registry.registerIterator("%STALLING_LIST%", &stalledIteratorDescriptor), "Stalling iterator placeholder should register");
+
+    TemplateContext ctx;
+    ctx.setRegistry(&registry);
+    TemplateRenderer::initializeContext(ctx, stalledIteratorWrapperTemplate);
+
+    uint8_t buffer[16];
+    size_t written = TemplateRenderer::renderNextChunk(ctx, buffer, sizeof(buffer));
+    TEST_ASSERT_GREATER_THAN_MESSAGE(0u, static_cast<uint32_t>(written), "Stalling iterator should emit static prefix before failing");
+    TEST_ASSERT_EQUAL_MEMORY_MESSAGE("Start:", buffer, 6, "Stalling iterator output should include expected prefix");
+    TEST_ASSERT_TRUE_MESSAGE(ctx.hasError(), "Renderer should enter error state after exhausting iteration guard");
+    TEST_ASSERT_TRUE_MESSAGE(stalledIteratorState.calls > 0, "Stalling iterator should be advanced at least once");
 }
 

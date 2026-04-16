@@ -39,10 +39,12 @@ void test_template_renderer_conditional_false_branch();
 void test_template_renderer_conditional_skip();
 void test_template_renderer_conditional_missing_delegate();
 void test_template_renderer_conditional_nested_iterator();
+void test_template_renderer_conditional_template_delegate_completes();
 void test_template_renderer_iterator_basic();
 void test_template_renderer_iterator_empty();
 void test_template_renderer_iterator_dynamic_items();
 void test_template_renderer_iterator_error_cleanup();
+void test_template_renderer_iterator_stall_guard();
 
 // Group 4: Integration Tests
 void test_integration_full_rendering();

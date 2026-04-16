@@ -133,6 +133,7 @@ void test_placeholder_registry_rendering() {
     registry.registerProgmemData("%CSS%", test_css_data);
     const PlaceholderEntry* entry1 = registry.getPlaceholder("%CSS%");
     TEST_ASSERT_NOT_NULL_MESSAGE(entry1, "Should find PROGMEM_DATA placeholder");
+    TEST_ASSERT_TRUE_MESSAGE(entry1->hasCachedLength, "PROGMEM placeholder should cache length");
     
     // Test render PROGMEM_DATA (full)
     uint8_t buffer1[256];
@@ -145,6 +146,9 @@ void test_placeholder_registry_rendering() {
     
     // Compare with PROGMEM data using strlen_P
     size_t expectedLen = strlen_P(test_css_data);
+    TEST_ASSERT_EQUAL_UINT32_MESSAGE(static_cast<uint32_t>(expectedLen),
+        static_cast<uint32_t>(entry1->cachedLength),
+        "Cached PROGMEM length should match source length");
     TEST_ASSERT_EQUAL_MESSAGE(expectedLen, len1, 
         "Should render full PROGMEM_DATA length");
     // Compare first few characters to verify content
@@ -169,6 +173,7 @@ void test_placeholder_registry_rendering() {
     registry.registerRamData("%TITLE%", getTestRamData);
     const PlaceholderEntry* entry2 = registry.getPlaceholder("%TITLE%");
     TEST_ASSERT_NOT_NULL_MESSAGE(entry2, "Should find RAM_DATA placeholder");
+    TEST_ASSERT_FALSE_MESSAGE(entry2->hasCachedLength, "RAM placeholder should not cache length");
     
     // Test render RAM_DATA (full)
     uint8_t buffer3[256];

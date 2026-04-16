@@ -7,7 +7,9 @@ DeviceFrameworkTemplateContext::DeviceFrameworkTemplateContext()
       registry(nullptr),
       totalBytesProcessed(0), startTime(0) {
     memset(placeholderName, 0, sizeof(placeholderName));
-    memset(renderingStack, 0, sizeof(renderingStack));
+    for (int i = 0; i < MAX_RENDERING_DEPTH; ++i) {
+        renderingStack[i] = RenderingContext();
+    }
 }
 
 void DeviceFrameworkTemplateContext::reset() {
@@ -20,7 +22,9 @@ void DeviceFrameworkTemplateContext::reset() {
     totalBytesProcessed = 0;
     startTime = millis();
     memset(placeholderName, 0, sizeof(placeholderName));
-    memset(renderingStack, 0, sizeof(renderingStack));
+    for (int i = 0; i < MAX_RENDERING_DEPTH; ++i) {
+        renderingStack[i] = RenderingContext();
+    }
 }
 
 // Unified stack management methods
@@ -107,7 +111,7 @@ void DeviceFrameworkTemplateContext::popContext() {
     }
     
     // Clear the popped context
-    memset(&ctx, 0, sizeof(RenderingContext));
+    ctx = RenderingContext();
 }
 
 RenderingContext* DeviceFrameworkTemplateContext::getCurrentContext() {
