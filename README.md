@@ -84,7 +84,7 @@ DFTE is a lightweight C++ template engine tailored for Arduino-class hardware (E
   - `isComplete(const TemplateContext&)`, `hasError(const TemplateContext&)` – convenience checks.
 
 - `DeviceFrameworkTemplateEngineDebug`
-  - Optional logging interface; create a `DeviceFrameworkTemplateEngineLogger` subclass and call `deviceFrameworkTemplateEngineEnableLogging(&logger)`.
+  - Optional logging interface; create a `DeviceFrameworkTemplateEngineLogger` subclass and call `deviceFrameworkTemplateEngineEnableLogging(&logger)` (or the two-argument overload with an owner tag, e.g. `this`, for `deviceFrameworkTemplateEngineDisableLoggingForOwner`).
 
 All public headers are re-exported from `TemplateEngine.h`, so typical sketches only include that file.
 
@@ -313,11 +313,11 @@ SerialLogger logger;
 
 void setup() {
   Serial.begin(115200);
-  deviceFrameworkTemplateEngineEnableLogging(&logger);
+  deviceFrameworkTemplateEngineEnableLogging(&logger, static_cast<const void*>(&logger));
 }
 ```
 
-Use `deviceFrameworkTemplateEngineDisableLogging()` to silence output or `deviceFrameworkTemplateEngineIsLoggingEnabled()` to inspect the current state.
+Use `deviceFrameworkTemplateEngineDisableLogging()` to silence output, `deviceFrameworkTemplateEngineDisableLoggingForOwner(tag)` to tear down only the registration made with that owner (for example WiFiManager’s server instance), or `deviceFrameworkTemplateEngineIsLoggingEnabled()` to inspect the current state.
 
 ## License
 

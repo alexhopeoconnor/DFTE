@@ -261,18 +261,24 @@ static DeviceFrameworkTemplateRenderer::RenderOutcome processIteratorContext(Dev
 
 } // namespace
 
-// Helper function to convert RenderingContextType to string
-static String getContextTypeString(RenderingContextType type) {
-    switch (type) {
-        case RenderingContextType::TEMPLATE: return "TEMPLATE";
-        case RenderingContextType::PLACEHOLDER_DATA: return "PLACEHOLDER_DATA";
-        case RenderingContextType::PLACEHOLDER_TEMPLATE: return "PLACEHOLDER_TEMPLATE";
-        default: return "UNKNOWN";
-    }
-}
-
 // Helper function to log state transitions with stack state
 static void logStateTransition(DeviceFrameworkTemplateContext& ctx, const String& fromState, const String& toState, const String& reason = "") {
+#if !defined(DFTE_ENABLE_TRACE)
+    (void)ctx;
+    (void)fromState;
+    (void)toState;
+    (void)reason;
+    return;
+#else
+    auto getContextTypeString = [](RenderingContextType type) -> String {
+        switch (type) {
+            case RenderingContextType::TEMPLATE: return "TEMPLATE";
+            case RenderingContextType::PLACEHOLDER_DATA: return "PLACEHOLDER_DATA";
+            case RenderingContextType::PLACEHOLDER_TEMPLATE: return "PLACEHOLDER_TEMPLATE";
+            default: return "UNKNOWN";
+        }
+    };
+
     if (!deviceFrameworkTemplateEngineLogger) {
         return;
     }
@@ -287,6 +293,7 @@ static void logStateTransition(DeviceFrameworkTemplateContext& ctx, const String
         msg += " | Current: " + String(currentCtx->name) + " (type=" + getContextTypeString(currentCtx->type) + ")";
     }
     deviceFrameworkTemplateEngineLogger->debug(msg);
+#endif
 }
 
 static String getStateName(TemplateRenderState state) {
@@ -887,6 +894,8 @@ void DeviceFrameworkTemplateRenderer::initializeContext(DeviceFrameworkTemplateC
     
     ctx.state = TemplateRenderState::TEXT;
     logStateTransition(ctx, "INIT", "TEXT", "Initialized template context");
+    DFTE_LOG_TRACE("initializeContext len=" + String(rootCtx->context.templateCtx.templateLen) + " progmem=" +
+                   String(templateInProgmem ? 1 : 0));
 }
 
 bool DeviceFrameworkTemplateRenderer::isComplete(const DeviceFrameworkTemplateContext& ctx) {
