@@ -125,6 +125,39 @@ bool DeviceFrameworkPlaceholderRegistry::registerRamData(const char* name, Place
     return true;
 }
 
+bool DeviceFrameworkPlaceholderRegistry::registerDynamicData(const char* name, const DynamicDataDescriptor* descriptor) {
+    if (placeholders == nullptr || maxPlaceholders == 0) {
+        DFTE_LOG_ERROR("Placeholder registry not initialized");
+        return false;
+    }
+
+    if (count >= maxPlaceholders) {
+        DFTE_LOG_ERROR("Placeholder registry full, cannot register: " + String(name));
+        return false;
+    }
+
+    if (!validatePlaceholderName(name)) {
+        return false;
+    }
+
+    if (descriptor == nullptr || descriptor->getter == nullptr) {
+        DFTE_LOG_ERROR("Invalid dynamic data descriptor for placeholder: " + String(name));
+        return false;
+    }
+
+    PlaceholderEntry& entry = placeholders[count];
+    strncpy(entry.name, name, sizeof(entry.name) - 1);
+    entry.name[sizeof(entry.name) - 1] = '\0';
+    entry.type = PlaceholderType::DYNAMIC_DATA;
+    entry.data = descriptor;
+    entry.getLength = nullptr;
+    entry.cachedLength = 0;
+    entry.hasCachedLength = false;
+
+    count++;
+    return true;
+}
+
 bool DeviceFrameworkPlaceholderRegistry::registerDynamicTemplate(const char* name, const DynamicTemplateDescriptor* descriptor) {
     if (placeholders == nullptr || maxPlaceholders == 0) {
         DFTE_LOG_ERROR("Placeholder registry not initialized");
@@ -296,6 +329,9 @@ size_t DeviceFrameworkPlaceholderRegistry::renderPlaceholder(const PlaceholderEn
         case PlaceholderType::RAM_DATA:
             return copyRamData((PlaceholderDataGetter)entry->data, offset, buffer, maxLen);
 
+        case PlaceholderType::DYNAMIC_DATA:
+            return copyDynamicData(static_cast<const DynamicDataDescriptor*>(entry->data), offset, buffer, maxLen);
+
         case PlaceholderType::DYNAMIC_TEMPLATE:
         case PlaceholderType::CONDITIONAL:
         case PlaceholderType::ITERATOR:
@@ -321,6 +357,18 @@ size_t DeviceFrameworkPlaceholderRegistry::getRamLength(const void* data) {
         return 0;
     }
     return strlen(str);
+}
+
+size_t DeviceFrameworkPlaceholderRegistry::getDynamicDataLength(const DynamicDataDescriptor* descriptor, const char* data) {
+    if (descriptor == nullptr || data == nullptr) {
+        return 0;
+    }
+
+    if (descriptor->getLength) {
+        return descriptor->getLength(data, descriptor->userData);
+    }
+
+    return strlen(data);
 }
 
 size_t DeviceFrameworkPlaceholderRegistry::getDynamicTemplateLength(const DynamicTemplateDescriptor* descriptor, const char* templateData) {
@@ -366,6 +414,28 @@ size_t DeviceFrameworkPlaceholderRegistry::copyRamData(PlaceholderDataGetter get
     constexpr size_t MAX_CHUNK = DFTE_RAM_CHUNK_SIZE;
     size_t chunkSize = min(min(maxLen, remaining), MAX_CHUNK);
     
+    memcpy(dest, data + offset, chunkSize);
+    return chunkSize;
+}
+
+size_t DeviceFrameworkPlaceholderRegistry::copyDynamicData(const DynamicDataDescriptor* descriptor,
+                                                           size_t offset,
+                                                           uint8_t* dest,
+                                                           size_t maxLen) {
+    if (descriptor == nullptr || descriptor->getter == nullptr || maxLen == 0) return 0;
+
+    const char* data = descriptor->getter(descriptor->userData);
+    if (data == nullptr) {
+        return 0;
+    }
+
+    size_t dataLen = getDynamicDataLength(descriptor, data);
+    if (offset >= dataLen) return 0;
+
+    size_t remaining = dataLen - offset;
+    constexpr size_t MAX_CHUNK = DFTE_RAM_CHUNK_SIZE;
+    size_t chunkSize = min(min(maxLen, remaining), MAX_CHUNK);
+
     memcpy(dest, data + offset, chunkSize);
     return chunkSize;
 }

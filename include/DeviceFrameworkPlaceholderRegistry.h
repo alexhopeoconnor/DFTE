@@ -90,6 +90,7 @@ public:
      * @return true if registered successfully
      */
     bool registerRamData(const char* name, PlaceholderDataGetter getter);
+    bool registerDynamicData(const char* name, const DynamicDataDescriptor* descriptor);
     bool registerDynamicTemplate(const char* name, const DynamicTemplateDescriptor* descriptor);
     bool registerConditional(const char* name, const ConditionalDescriptor* descriptor);
     bool registerIterator(const char* name, const IteratorDescriptor* descriptor);
@@ -124,6 +125,7 @@ public:
     // Static helper functions for length calculation
     static size_t getProgmemLength(const void* data);
     static size_t getRamLength(const void* data);
+    static size_t getDynamicDataLength(const DynamicDataDescriptor* descriptor, const char* data);
     static size_t getDynamicTemplateLength(const DynamicTemplateDescriptor* descriptor, const char* templateData);
     
 private:
@@ -138,6 +140,8 @@ private:
                                  uint8_t* dest, size_t maxLen);
     static size_t copyRamData(PlaceholderDataGetter getter, size_t offset, 
                              uint8_t* dest, size_t maxLen);
+    static size_t copyDynamicData(const DynamicDataDescriptor* descriptor, size_t offset,
+                                 uint8_t* dest, size_t maxLen);
 };
 
 #endif // DEVICEFRAMEWORK_PLACEHOLDER_REGISTRY_H

@@ -31,6 +31,7 @@ enum class PlaceholderType {
     PROGMEM_DATA,      // Large PROGMEM data (CSS, JS, base64 images)
     PROGMEM_TEMPLATE,  // Nested template in PROGMEM
     RAM_DATA,           // Dynamic RAM data via getter functions
+    DYNAMIC_DATA,       // Dynamic RAM data via getter + userData, rendered as raw bytes
     DYNAMIC_TEMPLATE,
     CONDITIONAL,
     ITERATOR
@@ -63,6 +64,12 @@ struct IteratorItemView;
 typedef void* (*IteratorOpenHandler)(void* userData);
 typedef IteratorStepResult (*IteratorNextHandler)(void* handle, struct IteratorItemView& view);
 typedef void (*IteratorCloseHandler)(void* handle);
+
+struct DynamicDataDescriptor {
+    DynamicTemplateGetter getter;
+    DynamicTemplateLengthGetter getLength;
+    void* userData;
+};
 
 struct DynamicTemplateDescriptor {
     DynamicTemplateGetter getter;

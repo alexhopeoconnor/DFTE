@@ -24,6 +24,15 @@ static bool pushPlaceholderEntry(DeviceFrameworkTemplateContext& ctx, const Plac
             dataCtx->context.data.offset = 0;
             return true;
         }
+        case PlaceholderType::DYNAMIC_DATA: {
+            if (!ctx.pushContext(RenderingContextType::PLACEHOLDER_DATA, name)) {
+                return false;
+            }
+            RenderingContext* dataCtx = ctx.getCurrentContext();
+            dataCtx->context.data.entry = entry;
+            dataCtx->context.data.offset = 0;
+            return true;
+        }
         case PlaceholderType::PROGMEM_TEMPLATE: {
             if (!ctx.pushContext(RenderingContextType::PLACEHOLDER_TEMPLATE, name)) {
                 return false;
@@ -659,6 +668,7 @@ DeviceFrameworkTemplateRenderer::RenderOutcome DeviceFrameworkTemplateRenderer::
     switch (entry->type) {
         case PlaceholderType::PROGMEM_DATA:
         case PlaceholderType::RAM_DATA:
+        case PlaceholderType::DYNAMIC_DATA:
             outcome.pushContext.type = RenderingContextType::PLACEHOLDER_DATA;
             outcome.pushContext.entry = entry;
             break;
@@ -768,7 +778,11 @@ DeviceFrameworkTemplateRenderer::RenderOutcome DeviceFrameworkTemplateRenderer::
     }
 
     size_t totalLength = 0;
-    if (entry->hasCachedLength) {
+    if (entry->type == PlaceholderType::DYNAMIC_DATA) {
+        const auto* descriptor = static_cast<const DynamicDataDescriptor*>(entry->data);
+        const char* data = (descriptor && descriptor->getter) ? descriptor->getter(descriptor->userData) : nullptr;
+        totalLength = DeviceFrameworkPlaceholderRegistry::getDynamicDataLength(descriptor, data);
+    } else if (entry->hasCachedLength) {
         totalLength = entry->cachedLength;
     } else if (entry->getLength != nullptr) {
         totalLength = entry->getLength(entry->data);
