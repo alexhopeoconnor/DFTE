@@ -140,9 +140,12 @@ All public headers are re-exported from `TemplateEngine.h`, so typical sketches 
 
 ### Async Streaming Pattern
 
-When serving requests with ESPAsyncWebServer, give every request its own `TemplateContext` so chunked rendering cannot be corrupted by overlapping clients. Build and cache your `PlaceholderRegistry` once during setup, then share it across handlers. The same pattern powers the DeviceFramework web UI and the DFTE examples:
+When serving requests with ESPAsyncWebServer, include `TemplateEngineAsyncWeb.h` and give every request its own `TemplateContext` so chunked rendering cannot be corrupted by overlapping clients. Build and cache your `PlaceholderRegistry` once during setup, then share it across handlers. The same pattern powers the DeviceFramework web UI and the DFTE examples:
 
 ```cpp
+#include <TemplateEngine.h>
+#include <TemplateEngineAsyncWeb.h>
+
 /** Global registry prepared during setup() */
 std::shared_ptr<PlaceholderRegistry> registry;
 
@@ -164,19 +167,9 @@ void streamTemplate(AsyncWebServerRequest* request, const char* rootTemplate) {
 
   request->onDisconnect([ctx]() mutable { ctx.reset(); });
 
-  AsyncWebServerResponse* response = request->beginChunkedResponse(
-      "text/html; charset=utf-8",
-      [ctx](uint8_t* buffer, size_t maxLen, size_t) mutable -> size_t {
-        if (!ctx) {
-          return 0;
-        }
-
-        size_t written = TemplateRenderer::renderNextChunk(*ctx, buffer, maxLen);
-        if (!written || TemplateRenderer::isComplete(*ctx) || TemplateRenderer::hasError(*ctx)) {
-          ctx.reset();              // prevent cross-request pollution
-        }
-        return written;
-      });
+  AsyncWebServerResponse* response =
+      TemplateEngineAsyncWeb::beginSafeTemplateResponse(
+          request, "text/html; charset=utf-8", ctx, 128);
 
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");

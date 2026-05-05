@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <TemplateEngine.h>
+#include <TemplateEngineAsyncWeb.h>
 #include <cstring>
 #include <memory>
 #include <DNSServer.h>
@@ -219,25 +220,9 @@ void streamTemplate(AsyncWebServerRequest* request,
   ctx->setRegistry(registryPtr.get());
   TemplateRenderer::initializeContext(*ctx, rootTemplate);
 
-  request->onDisconnect([ctx]() mutable {
-    ctx.reset();
-  });
-
-  AsyncWebServerResponse* response = request->beginChunkedResponse(
-      "text/html; charset=utf-8",
-      [ctx](uint8_t* buffer, size_t maxLen, size_t /*index*/) mutable -> size_t {
-        if (!ctx) {
-          return 0;
-        }
-
-        size_t written = TemplateRenderer::renderNextChunk(*ctx, buffer, maxLen);
-
-        if (!written || TemplateRenderer::isComplete(*ctx) || TemplateRenderer::hasError(*ctx)) {
-          ctx.reset();
-        }
-
-        return written;
-      });
+  AsyncWebServerResponse* response =
+      TemplateEngineAsyncWeb::beginSafeTemplateResponse(
+          request, "text/html; charset=utf-8", ctx, 128);
 
   response->addHeader("Cache-Control", "no-cache, no-store, must-revalidate");
   response->addHeader("Pragma", "no-cache");
