@@ -1,6 +1,6 @@
 {
   "name": "DeviceFrameworkTemplateEngine",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Memory-efficient streaming template engine for ESP8266/ESP32 with chunked rendering support. Designed for embedded web interfaces with PROGMEM template support.",
   "keywords": [
     "template",
@@ -24,7 +24,15 @@
   ],
   "license": "MIT",
   "frameworks": "arduino",
-  "platforms": ["espressif8266", "espressif32"],
-  "dependencies": {}
+  "platforms": [
+    "espressif8266",
+    "espressif32"
+  ],
+  "dependencies": {},
+  "$schema": "https://raw.githubusercontent.com/platformio/platformio-core/develop/platformio/assets/schema/library.json",
+  "homepage": "https://github.com/alexhopeoconnor/DFTE",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/alexhopeoconnor/DFTE.git"
+  }
 }
-

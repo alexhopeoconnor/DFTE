@@ -9,18 +9,10 @@
   #define DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT 24
 #endif
 
-// Use DeviceFramework config defaults at compile-time if available, otherwise use internal defaults
-// Array sizes must be compile-time constants
-#ifdef DEVICEFRAMEWORK_CONFIG_H
-  // DeviceFramework is present - use config defaults for array sizing
-  // DeviceFrameworkConfig.h must be included before this file to access CONFIG_*_default macros
-  #ifdef CONFIG_templatePlaceholderNameSize_default
-    #define DFTE_PLACEHOLDER_NAME_SIZE CONFIG_templatePlaceholderNameSize_default
-  #else
-    #define DFTE_PLACEHOLDER_NAME_SIZE DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT
-  #endif
-#else
-  // Standalone usage - use internal defaults
+// Layout-affecting settings must be passed as build-wide DFTE_* flags so every
+// translation unit sees the same object layout. DeviceFramework runtime config is
+// intentionally not used for fixed-size storage.
+#ifndef DFTE_PLACEHOLDER_NAME_SIZE
   #define DFTE_PLACEHOLDER_NAME_SIZE DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT
 #endif
 

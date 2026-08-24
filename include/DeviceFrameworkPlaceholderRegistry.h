@@ -26,23 +26,13 @@
   #define DFTE_RAM_CHUNK_SIZE_DEFAULT 128
 #endif
 
-// Use DeviceFramework config defaults at compile-time if available, otherwise use internal defaults
-#ifdef DEVICEFRAMEWORK_CONFIG_H
-  // DeviceFramework is present - use config defaults
-  // DeviceFrameworkConfig.h must be included before this file to access CONFIG_*_default macros
-  #ifdef CONFIG_templateProgmemChunkSize_default
-    #define DFTE_PROGMEM_CHUNK_SIZE CONFIG_templateProgmemChunkSize_default
-  #else
-    #define DFTE_PROGMEM_CHUNK_SIZE DFTE_PROGMEM_CHUNK_SIZE_DEFAULT
-  #endif
-  #ifdef CONFIG_templateRamChunkSize_default
-    #define DFTE_RAM_CHUNK_SIZE CONFIG_templateRamChunkSize_default
-  #else
-    #define DFTE_RAM_CHUNK_SIZE DFTE_RAM_CHUNK_SIZE_DEFAULT
-  #endif
-#else
-  // Standalone usage - use internal defaults
+// Chunk settings are build-wide DFTE_* flags. They are not inferred from a
+// consumer header so library and consumer translation units remain consistent.
+#ifndef DFTE_PROGMEM_CHUNK_SIZE
   #define DFTE_PROGMEM_CHUNK_SIZE DFTE_PROGMEM_CHUNK_SIZE_DEFAULT
+#endif
+
+#ifndef DFTE_RAM_CHUNK_SIZE
   #define DFTE_RAM_CHUNK_SIZE DFTE_RAM_CHUNK_SIZE_DEFAULT
 #endif
 

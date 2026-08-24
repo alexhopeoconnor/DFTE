@@ -20,27 +20,13 @@
   #define DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT 24
 #endif
 
-// Use DeviceFramework config defaults at compile-time if available, otherwise use internal defaults
-// Array sizes must be compile-time constants
-#ifdef DEVICEFRAMEWORK_CONFIG_H
-  // DeviceFramework is present - use config defaults for array sizing
-  // DeviceFrameworkConfig.h must be included before this file to access CONFIG_*_default macros
-  #ifdef CONFIG_templateStackDepth_default
-    #define DFTE_MAX_STACK_DEPTH CONFIG_templateStackDepth_default
-  #else
-    #define DFTE_MAX_STACK_DEPTH DFTE_MAX_STACK_DEPTH_DEFAULT
-  #endif
-  #ifdef CONFIG_templateBufferSize_default
-    #define DFTE_BUFFER_SIZE CONFIG_templateBufferSize_default
-  #else
-    #define DFTE_BUFFER_SIZE DFTE_BUFFER_SIZE_DEFAULT
-  #endif
-  // DFTE_PLACEHOLDER_NAME_SIZE is already defined in DeviceFrameworkTemplateTypes.h
-#else
-  // Standalone usage - use internal defaults
+// Layout-affecting settings must be supplied through build-wide DFTE_* flags.
+#ifndef DFTE_MAX_STACK_DEPTH
   #define DFTE_MAX_STACK_DEPTH DFTE_MAX_STACK_DEPTH_DEFAULT
+#endif
+
+#ifndef DFTE_BUFFER_SIZE
   #define DFTE_BUFFER_SIZE DFTE_BUFFER_SIZE_DEFAULT
-  // DFTE_PLACEHOLDER_NAME_SIZE is already defined in DeviceFrameworkTemplateTypes.h
 #endif
 
 // Forward declaration

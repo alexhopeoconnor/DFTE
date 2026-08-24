@@ -10,17 +10,8 @@
   #define DFTE_MAX_ITERATIONS_DEFAULT 50
 #endif
 
-// Use DeviceFramework config defaults at compile-time if available, otherwise use internal defaults
-#ifdef DEVICEFRAMEWORK_CONFIG_H
-  // DeviceFramework is present - use config defaults
-  // DeviceFrameworkConfig.h must be included before this file to access CONFIG_*_default macros
-  #ifdef CONFIG_templateMaxIterations_default
-    #define DFTE_MAX_ITERATIONS CONFIG_templateMaxIterations_default
-  #else
-    #define DFTE_MAX_ITERATIONS DFTE_MAX_ITERATIONS_DEFAULT
-  #endif
-#else
-  // Standalone usage - use internal defaults
+// Renderer settings are build-wide DFTE_* flags.
+#ifndef DFTE_MAX_ITERATIONS
   #define DFTE_MAX_ITERATIONS DFTE_MAX_ITERATIONS_DEFAULT
 #endif
 
