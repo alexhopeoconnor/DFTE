@@ -69,6 +69,7 @@ public:
     unsigned long startTime;
     
     DeviceFrameworkTemplateContext();
+    ~DeviceFrameworkTemplateContext();
     void reset();
     
     // Unified stack management methods

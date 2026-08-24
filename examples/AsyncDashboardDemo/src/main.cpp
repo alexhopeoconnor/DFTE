@@ -125,7 +125,12 @@ struct DeviceIteratorState {
 
 DeviceIteratorState gIteratorState;
 static PlaceholderEntry gDeviceOverrides[kDeviceCount][4];
+static DynamicDataDescriptor gDeviceOverrideData[kDeviceCount][4];
 static bool gOverridesInitialized = false;
+
+const char* getStaticRamValue(void* userData) {
+  return static_cast<const char*>(userData);
+}
 
 void initializeDeviceOverrides() {
   if (gOverridesInitialized) {
@@ -148,9 +153,10 @@ void initializeDeviceOverrides() {
       PlaceholderEntry& entry = gDeviceOverrides[i][field];
       memset(entry.name, 0, sizeof(entry.name));
       strncpy(entry.name, names[field], sizeof(entry.name) - 1);
-      entry.type = PlaceholderType::PROGMEM_DATA;
-      entry.data = values[field];
-      entry.getLength = DeviceFrameworkPlaceholderRegistry::getProgmemLength;
+      gDeviceOverrideData[i][field] = {getStaticRamValue, nullptr, const_cast<char*>(values[field])};
+      entry.type = PlaceholderType::DYNAMIC_DATA;
+      entry.data = &gDeviceOverrideData[i][field];
+      entry.getLength = nullptr;
     }
   }
 

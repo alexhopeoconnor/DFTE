@@ -232,39 +232,25 @@ Refer to the Unity tests in `test/test_template_engine/tests` for exhaustive com
 
 ### Memory & Configuration Knobs
 
-Tune DFTE by defining these macros **before** including `TemplateEngine.h` (or via PlatformIO `build_flags = -DNAME=value`). Larger values increase RAM or flash use, so bump them only when necessary.
+DFTE has two kinds of limits. Set build-wide limits with PlatformIO `build_flags`, so the library and every consuming translation unit use the exact same object layout. Do not set these only in a sketch header.
 
-- `DFTE_BUFFER_SIZE_DEFAULT` (512 bytes) – streaming buffer inside `TemplateContext`.
-- `DFTE_MAX_STACK_DEPTH_DEFAULT` (16) – maximum nested placeholder/template depth.
-- `DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT` (24) – length limit for placeholder tokens.
-- `DFTE_MAX_PLACEHOLDERS_DEFAULT` (16) – default capacity when constructing `PlaceholderRegistry`.
-- `DFTE_PROGMEM_CHUNK_SIZE_DEFAULT` (512) – copy window when reading PROGMEM data.
-- `DFTE_RAM_CHUNK_SIZE_DEFAULT` (128) – chunk size for RAM-based getters.
-- `DFTE_MAX_ITERATIONS_DEFAULT` (50) – safety cap for iterator placeholders.
+- `DFTE_BUFFER_SIZE` (default 512) – streaming buffer inside `TemplateContext`.
+- `DFTE_MAX_STACK_DEPTH` (default 16) – rendering stack frames. A nested template generally uses two frames, so set this to at least twice the intended nesting plus one.
+- `DFTE_PLACEHOLDER_NAME_SIZE` (default 24) – maximum placeholder-token length including `%` characters.
+- `DFTE_PROGMEM_CHUNK_SIZE` (default 512) and `DFTE_RAM_CHUNK_SIZE` (default 128) – source copy windows.
+- `DFTE_MAX_ITERATIONS` (default 50) – safety cap for an individual render call.
+- `DFTE_MAX_PLACEHOLDERS_DEFAULT` (default 16) – constructor default only; alternatively pass an explicit capacity to `PlaceholderRegistry`.
 
-```
-// Increase iterator cap to 100 and expand streaming buffer
-#define DFTE_MAX_ITERATIONS_DEFAULT 100
-#define DFTE_BUFFER_SIZE_DEFAULT 768
-#include <TemplateEngine.h>
-```
-
-**Using DFTE inside DeviceFramework**  
-DeviceFramework projects generate a `DeviceFrameworkTemplateConfig.h` that is re-exported by `DeviceFrameworkConfig.h`. Define your defaults there and make sure `DeviceFrameworkConfig.h` is included before `TemplateEngine.h`; DFTE detects the `CONFIG_template*` symbols and swaps them in automatically.
-
-```
-// DeviceFrameworkTemplateConfig.h
-#pragma once
-
-#define CONFIG_templateBufferSize_default       768
-#define CONFIG_templateStackDepth_default        24
-#define CONFIG_templateMaxTemplatePlaceholders_default 24
-#define CONFIG_templateProgmemChunkSize_default 1024
-#define CONFIG_templateRamChunkSize_default      256
-#define CONFIG_templateMaxIterations_default      80
+```ini
+; platformio.ini
+build_flags =
+    -DDFTE_BUFFER_SIZE=768
+    -DDFTE_MAX_STACK_DEPTH=24
+    -DDFTE_PLACEHOLDER_NAME_SIZE=32
+    -DDFTE_MAX_ITERATIONS=80
 ```
 
-When the core pulls in `DeviceFrameworkConfig.h`, all templates compiled in that project will inherit these values without further changes.
+DFTE is deliberately independent of DeviceFramework's runtime `CONFIG_template*` values. DeviceFramework may choose a registry capacity at runtime, but any fixed DFTE layout must be configured by the shared `DFTE_*` build flags above. This prevents an application header and the compiled library from disagreeing about object size.
 
 ## PlatformIO Usage
 
@@ -276,7 +262,7 @@ lib_deps =
     https://github.com/alexhopeoconnor/DFTE
 ```
 
-Pin to a specific release tag if you need reproducible builds (for example `https://github.com/alexhopeoconnor/DFTE#v1.0.0`), or keep the `lib_deps` entry as-is to track the latest main branch during development.
+Pin to a specific release tag if you need reproducible builds (for example `https://github.com/alexhopeoconnor/DFTE#v1.0.2`), or keep the `lib_deps` entry as-is to track the latest main branch during development.
 
 ### Local Development & Testing
 ```

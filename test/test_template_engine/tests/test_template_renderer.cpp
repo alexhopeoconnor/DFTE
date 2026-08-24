@@ -422,6 +422,7 @@ static const char PROGMEM stalledIteratorWrapperTemplate[] = "Start:%STALLING_LI
 
 struct StalledIteratorState {
     size_t calls;
+    bool closeCalled;
 };
 
 static StalledIteratorState stalledIteratorState;
@@ -430,6 +431,7 @@ static void* stalledIteratorOpen(void* userData) {
     StalledIteratorState* state = static_cast<StalledIteratorState*>(userData);
     if (state) {
         state->calls = 0;
+        state->closeCalled = false;
     }
     return state;
 }
@@ -449,7 +451,10 @@ static IteratorStepResult stalledIteratorNext(void* handle, IteratorItemView& vi
 }
 
 static void stalledIteratorClose(void* handle) {
-    (void)handle;
+    StalledIteratorState* state = static_cast<StalledIteratorState*>(handle);
+    if (state) {
+        state->closeCalled = true;
+    }
 }
 
 static IteratorDescriptor stalledIteratorDescriptor = {
@@ -852,27 +857,21 @@ void test_template_renderer_nested() {
         "Should contain placeholder value");
     
     // Test deep nesting (up to MAX_RENDERING_DEPTH)
+    // A nested template consumes a placeholder frame plus a template frame.
+    // Seven nested templates fit within the default 16-frame rendering stack.
     registry.registerProgmemTemplate("%L2%", deep_nest_level2);
     registry.registerProgmemTemplate("%L3%", deep_nest_level3);
     registry.registerProgmemTemplate("%L4%", deep_nest_level4);
     registry.registerProgmemTemplate("%L5%", deep_nest_level5);
     registry.registerProgmemTemplate("%L6%", deep_nest_level6);
     registry.registerProgmemTemplate("%L7%", deep_nest_level7);
-    registry.registerProgmemTemplate("%L8%", deep_nest_level8);
-    registry.registerProgmemTemplate("%L9%", deep_nest_level9);
-    registry.registerProgmemTemplate("%L10%", deep_nest_level10);
-    registry.registerProgmemTemplate("%L11%", deep_nest_level11);
-    registry.registerProgmemTemplate("%L12%", deep_nest_level12);
-    registry.registerProgmemTemplate("%L13%", deep_nest_level13);
-    registry.registerProgmemTemplate("%L14%", deep_nest_level14);
-    registry.registerProgmemTemplate("%L15%", deep_nest_level15);
-    registry.registerProgmemTemplate("%L16%", deep_nest_level16);
-    
+    registry.registerProgmemTemplate("%L8%", deep_nest_level16);
     ctx.reset();
     ctx.setRegistry(&registry);
     TemplateRenderer::initializeContext(ctx, deep_nest_level1);
     String result5 = captureRenderedOutput(ctx);
     TEST_ASSERT_TRUE_MESSAGE(result5.length() > 0, "Should render deep nested template");
+    TEST_ASSERT_FALSE_MESSAGE(ctx.hasError(), "Deep nesting within the frame limit must not error");
     TEST_ASSERT_TRUE_MESSAGE(TemplateRenderer::isComplete(ctx), 
         "Should complete deep nested template");
     
@@ -1364,6 +1363,7 @@ void test_template_renderer_iterator_error_cleanup() {
 void test_template_renderer_iterator_stall_guard() {
     PlaceholderRegistry registry(4);
     stalledIteratorState.calls = 0;
+    stalledIteratorState.closeCalled = false;
     TEST_ASSERT_TRUE_MESSAGE(registry.registerIterator("%STALLING_LIST%", &stalledIteratorDescriptor), "Stalling iterator placeholder should register");
 
     TemplateContext ctx;
@@ -1376,5 +1376,38 @@ void test_template_renderer_iterator_stall_guard() {
     TEST_ASSERT_EQUAL_MEMORY_MESSAGE("Start:", buffer, 6, "Stalling iterator output should include expected prefix");
     TEST_ASSERT_TRUE_MESSAGE(ctx.hasError(), "Renderer should enter error state after exhausting iteration guard");
     TEST_ASSERT_TRUE_MESSAGE(stalledIteratorState.calls > 0, "Stalling iterator should be advanced at least once");
+    TEST_ASSERT_TRUE_MESSAGE(stalledIteratorState.closeCalled, "Stall cleanup should close the live iterator");
+}
+
+void test_template_renderer_iterator_reset_and_destruction_cleanup() {
+    PlaceholderRegistry registry(4);
+    TEST_ASSERT_TRUE_MESSAGE(registry.registerIterator("%WIFI_LIST%", &wifiIteratorDescriptor), "Iterator should register");
+
+    resetWifiIteratorState(2);
+    {
+        TemplateContext ctx;
+        ctx.setRegistry(&registry);
+        TemplateRenderer::initializeContext(ctx, iteratorWrapperTemplate);
+        uint8_t buffer[1];
+        while (wifiIteratorState.index == 0 && !ctx.hasError()) {
+            TemplateRenderer::renderNextChunk(ctx, buffer, sizeof(buffer));
+        }
+        TEST_ASSERT_FALSE_MESSAGE(wifiIteratorState.closeCalled, "Iterator should remain open before reset");
+        ctx.reset();
+        TEST_ASSERT_TRUE_MESSAGE(wifiIteratorState.closeCalled, "reset should close an interrupted iterator");
+    }
+
+    resetWifiIteratorState(2);
+    {
+        TemplateContext ctx;
+        ctx.setRegistry(&registry);
+        TemplateRenderer::initializeContext(ctx, iteratorWrapperTemplate);
+        uint8_t buffer[1];
+        while (wifiIteratorState.index == 0 && !ctx.hasError()) {
+            TemplateRenderer::renderNextChunk(ctx, buffer, sizeof(buffer));
+        }
+        TEST_ASSERT_FALSE_MESSAGE(wifiIteratorState.closeCalled, "Iterator should remain open before destruction");
+    }
+    TEST_ASSERT_TRUE_MESSAGE(wifiIteratorState.closeCalled, "destruction should close an interrupted iterator");
 }
 

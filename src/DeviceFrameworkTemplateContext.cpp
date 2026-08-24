@@ -12,7 +12,19 @@ DeviceFrameworkTemplateContext::DeviceFrameworkTemplateContext()
     }
 }
 
+DeviceFrameworkTemplateContext::~DeviceFrameworkTemplateContext() {
+    while (renderingDepth > 0) {
+        popContext();
+    }
+}
+
 void DeviceFrameworkTemplateContext::reset() {
+    // An interrupted render may own an iterator handle. Pop through the stack
+    // before overwriting it so every descriptor receives its close callback.
+    while (renderingDepth > 0) {
+        popContext();
+    }
+
     state = TemplateRenderState::TEXT;
     renderingDepth = 0;
     placeholderPos = 0;

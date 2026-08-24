@@ -11,7 +11,7 @@ String captureRenderedOutput(TemplateContext& ctx, size_t bufferSize) {
         return output;
     }
     
-    while (!TemplateRenderer::isComplete(ctx)) {
+    while (!TemplateRenderer::isComplete(ctx) && !TemplateRenderer::hasError(ctx)) {
         size_t written = TemplateRenderer::renderNextChunk(ctx, buffer, bufferSize);
         if (written > 0) {
             // Arduino String doesn't have (const char*, size_t) constructor

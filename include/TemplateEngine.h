@@ -24,7 +24,8 @@
  *   DeviceFrameworkTemplateRenderer::initializeContext(ctx, my_template);
  *   
  *   uint8_t buffer[512];
- *   while (!DeviceFrameworkTemplateRenderer::isComplete(ctx)) {
+ *   while (!DeviceFrameworkTemplateRenderer::isComplete(ctx) &&
+ *          !DeviceFrameworkTemplateRenderer::hasError(ctx)) {
  *       size_t written = DeviceFrameworkTemplateRenderer::renderNextChunk(ctx, buffer, sizeof(buffer));
  *       server->sendContent((const char*)buffer, written);
  *   }

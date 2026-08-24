@@ -74,6 +74,7 @@ TestCase tests[] = {
     TEST_ENTRY(test_template_renderer_iterator_dynamic_items),
     TEST_ENTRY(test_template_renderer_iterator_error_cleanup),
     TEST_ENTRY(test_template_renderer_iterator_stall_guard),
+    TEST_ENTRY(test_template_renderer_iterator_reset_and_destruction_cleanup),
     
     // Group 4: Integration Tests
     TEST_ENTRY(test_integration_full_rendering),

@@ -354,6 +354,9 @@ DeviceFrameworkTemplateRenderer::RenderOutcome DeviceFrameworkTemplateRenderer::
 
     if (!applyStackCommands(ctx, outcome)) {
         ctx.state = TemplateRenderState::ERROR;
+        while (ctx.renderingDepth > 0) {
+            ctx.popContext();
+        }
         return makeError();
     }
 
@@ -369,6 +372,13 @@ DeviceFrameworkTemplateRenderer::RenderOutcome DeviceFrameworkTemplateRenderer::
 
     outcome.finished = (ctx.state == TemplateRenderState::COMPLETE);
     outcome.errored = (ctx.state == TemplateRenderState::ERROR);
+    if (outcome.errored) {
+        // Error paths can leave a live iterator below the active context.
+        // Pop all contexts so its close handler is called exactly once.
+        while (ctx.renderingDepth > 0) {
+            ctx.popContext();
+        }
+    }
 
     return outcome;
 }
@@ -875,6 +885,9 @@ size_t DeviceFrameworkTemplateRenderer::renderNextChunk(DeviceFrameworkTemplateC
         DFTE_LOG_WARN("Maximum iterations reached in renderNextChunk");
         if (consecutiveNoProgressIterations >= 3 && !ctx.isComplete() && !ctx.hasError()) {
             ctx.state = TemplateRenderState::ERROR;
+            while (ctx.renderingDepth > 0) {
+                ctx.popContext();
+            }
         }
     }
 

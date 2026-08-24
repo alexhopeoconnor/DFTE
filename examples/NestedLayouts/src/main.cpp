@@ -103,6 +103,11 @@ struct SubsystemIteratorState {
 
 SubsystemIteratorState iteratorState;
 PlaceholderEntry subsystemOverrides[SUBSYSTEM_COUNT][3];
+DynamicDataDescriptor subsystemOverrideData[SUBSYSTEM_COUNT][3];
+
+const char* getStaticRamValue(void* userData) {
+  return static_cast<const char*>(userData);
+}
 
 void initialiseOverrides() {
   for (size_t i = 0; i < SUBSYSTEM_COUNT; ++i) {
@@ -110,21 +115,24 @@ void initialiseOverrides() {
 
     PlaceholderEntry& name = subsystemOverrides[i][0];
     strncpy(name.name, "%NAME%", sizeof(name.name) - 1);
-    name.type = PlaceholderType::RAM_DATA;
-    name.data = status.name;
-    name.getLength = DeviceFrameworkPlaceholderRegistry::getRamLength;
+    subsystemOverrideData[i][0] = {getStaticRamValue, nullptr, const_cast<char*>(status.name)};
+    name.type = PlaceholderType::DYNAMIC_DATA;
+    name.data = &subsystemOverrideData[i][0];
+    name.getLength = nullptr;
 
     PlaceholderEntry& detail = subsystemOverrides[i][1];
     strncpy(detail.name, "%DETAIL%", sizeof(detail.name) - 1);
-    detail.type = PlaceholderType::RAM_DATA;
-    detail.data = status.detail;
-    detail.getLength = DeviceFrameworkPlaceholderRegistry::getRamLength;
+    subsystemOverrideData[i][1] = {getStaticRamValue, nullptr, const_cast<char*>(status.detail)};
+    detail.type = PlaceholderType::DYNAMIC_DATA;
+    detail.data = &subsystemOverrideData[i][1];
+    detail.getLength = nullptr;
 
     PlaceholderEntry& severity = subsystemOverrides[i][2];
     strncpy(severity.name, "%SEVERITY%", sizeof(severity.name) - 1);
-    severity.type = PlaceholderType::RAM_DATA;
-    severity.data = status.severityClass;
-    severity.getLength = DeviceFrameworkPlaceholderRegistry::getRamLength;
+    subsystemOverrideData[i][2] = {getStaticRamValue, nullptr, const_cast<char*>(status.severityClass)};
+    severity.type = PlaceholderType::DYNAMIC_DATA;
+    severity.data = &subsystemOverrideData[i][2];
+    severity.getLength = nullptr;
   }
 }
 

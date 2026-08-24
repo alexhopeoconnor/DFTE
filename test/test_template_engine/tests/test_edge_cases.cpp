@@ -285,28 +285,22 @@ void test_edge_cases_stress() {
     
     // Test stack depth near limit
     registry.clear();
+    // A nested template consumes a placeholder frame plus a template frame.
+    // Seven nested templates fit within the default 16-frame rendering stack.
     registry.registerProgmemTemplate("%L2%", deep_nest_level2);
     registry.registerProgmemTemplate("%L3%", deep_nest_level3);
     registry.registerProgmemTemplate("%L4%", deep_nest_level4);
     registry.registerProgmemTemplate("%L5%", deep_nest_level5);
     registry.registerProgmemTemplate("%L6%", deep_nest_level6);
     registry.registerProgmemTemplate("%L7%", deep_nest_level7);
-    registry.registerProgmemTemplate("%L8%", deep_nest_level8);
-    registry.registerProgmemTemplate("%L9%", deep_nest_level9);
-    registry.registerProgmemTemplate("%L10%", deep_nest_level10);
-    registry.registerProgmemTemplate("%L11%", deep_nest_level11);
-    registry.registerProgmemTemplate("%L12%", deep_nest_level12);
-    registry.registerProgmemTemplate("%L13%", deep_nest_level13);
-    registry.registerProgmemTemplate("%L14%", deep_nest_level14);
-    registry.registerProgmemTemplate("%L15%", deep_nest_level15);
-    registry.registerProgmemTemplate("%L16%", deep_nest_level16);
-    
+    registry.registerProgmemTemplate("%L8%", deep_nest_level16);
     ctx.reset();
     ctx.setRegistry(&registry);
     TemplateRenderer::initializeContext(ctx, deep_nest_level1);
     String result3 = captureRenderedOutput(ctx);
     
     TEST_ASSERT_TRUE_MESSAGE(result3.length() > 0, "Should render deep nested template");
+    TEST_ASSERT_FALSE_MESSAGE(ctx.hasError(), "Deep nesting within the frame limit must not error");
     TEST_ASSERT_TRUE_MESSAGE(TemplateRenderer::isComplete(ctx), 
         "Should complete deep nested template");
     TEST_ASSERT_LESS_OR_EQUAL_MESSAGE(TemplateContext::MAX_RENDERING_DEPTH, ctx.renderingDepth, 
