@@ -1,9 +1,18 @@
 # Device Framework Template Engine (DFTE)
 
-DFTE is a lightweight C++ template engine tailored for Arduino-class hardware (ESP8266, ESP32, RP2040, and friends) that need to render rich HTML dashboards or textual feeds without allocating giant buffers. It streams HTML over chunked HTTP, stitches together deeply nested layouts from PROGMEM, and injects live device data sourced from RAM getters—all while keeping your microcontroller responsive. If you are searching for an “ESP32 streaming HTML template engine” or a way to “render dynamic Arduino web UI without SPIFFS,” DFTE is the solution.
+DFTE is a lightweight C++ template engine for ESP8266 and ESP32 Arduino
+projects that need to render HTML dashboards or textual feeds without allocating
+giant buffers. It streams HTML over chunked HTTP, stitches together nested
+layouts from PROGMEM, and injects live device data from RAM getters while
+keeping the microcontroller responsive.
 
+The published package and CI support ESP8266 and ESP32. The code may be useful
+on other Arduino-compatible targets, but those targets are not currently part
+of the supported release matrix and should be validated by the consuming
+project.
 
 ## Quickstart
+
 1. Define your root template in PROGMEM (or RAM if you prefer):
 
    ```
@@ -254,23 +263,44 @@ DFTE is deliberately independent of DeviceFramework's runtime `CONFIG_template*`
 
 ## PlatformIO Usage
 
-### Consume as a Dependency
-Add DFTE to your project’s `platformio.ini` using the Git repository URL:
+### Consume as a dependency
 
-```
+Pin a released Git tag in the application's `platformio.ini`:
+
+```ini
 lib_deps =
-    https://github.com/alexhopeoconnor/DFTE
+    DeviceFrameworkTemplateEngine=https://github.com/alexhopeoconnor/DFTE.git#v1.0.2
 ```
 
-Pin to a specific release tag if you need reproducible builds (for example `https://github.com/alexhopeoconnor/DFTE#v1.0.2`), or keep the `lib_deps` entry as-is to track the latest main branch during development.
+The suffix after `#` is a Git ref. PlatformIO clones the repository and checks
+out that tag; GitHub Release assets are unrelated. A tag is reproducible,
+whereas `#main` deliberately follows moving development. Use a local
+`symlink://` or `file://` dependency only while working on DFTE itself.
 
-### Local Development & Testing
+### Test without hardware
+
+The test environments compile the full Unity suites without uploading or
+executing them, so no board is required:
+
+```bash
+pio test -e test_template_engine_8266 --without-uploading --without-testing
+pio test -e test_template_engine_esp32 --without-uploading --without-testing
 ```
-pio test -e test_template_engine                         # run full Unity suite
-pio test -e test_template_engine -f test_template_renderer   # single test file
-pio run -e test_template_engine                          # compile without running tests
+
+Both environments set `test_build_src = yes`, so the library sources are
+included. CI runs the two commands above on every push and pull request.
+
+### Publish a release
+
+Update `library.json`, `CHANGELOG.md`, and the public documentation, run
+both compile checks, then create the annotated tag:
+
+```bash
+./scripts/prepare-release.sh vMAJOR.MINOR.PATCH --tag
 ```
-The default environment targets `d1_mini` (ESP8266) with `test_build_src = yes` so library sources are included during builds.
+
+Push the branch and tag. The tag workflow validates the PlatformIO package
+again and creates the GitHub Release.
 
 ### Debug Logging
 
