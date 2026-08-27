@@ -14,5 +14,7 @@ pio run -d examples/NestedLayouts -e example_esp8266
 pio run -d examples/NestedLayouts -e example_esp32
 ```
 
+See the shared [examples guide](../README.md) and [template-language guide](../../docs/TEMPLATE_LANGUAGE.md).
+
 Open the serial monitor at 115200 baud to inspect the rendered output.
 

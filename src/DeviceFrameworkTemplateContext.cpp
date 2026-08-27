@@ -154,7 +154,7 @@ RenderingContextType DeviceFrameworkTemplateContext::getCurrentContextType() con
 }
 
 bool DeviceFrameworkTemplateContext::isComplete() const {
-    return state == TemplateRenderState::COMPLETE || state == TemplateRenderState::ERROR;
+    return state == TemplateRenderState::COMPLETE;
 }
 
 bool DeviceFrameworkTemplateContext::hasError() const {

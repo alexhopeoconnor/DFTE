@@ -2,22 +2,32 @@ name: Build
 
 on:
   push:
+    branches: [main]
   pull_request:
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
+  documentation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: ./scripts/check-docs.sh
   compile-tests:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        environment: ["test_template_engine_8266", "test_template_engine_esp32"]
+        platform: [esp8266, esp32]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - run: python -m pip install --upgrade platformio==6.1.19
-      - run: pio test -e ${{ matrix.environment }} --without-uploading --without-testing
+      - run: ./scripts/test.sh compile --platform ${{ matrix.platform }}

@@ -27,6 +27,13 @@ if [[ -f "$root/library.properties" ]]; then
     fi
 fi
 
+if ! grep -q "^## ${version}$" "$root/CHANGELOG.md"; then
+    echo "CHANGELOG.md is missing a ## ${version} section" >&2
+    exit 1
+fi
+
+git -C "$root" diff --check
+
 package_dir="$(mktemp -d)"
 trap 'rm -rf "$package_dir"' EXIT
 pio pkg pack "$root" --output "$package_dir/package.tar.gz" >/dev/null

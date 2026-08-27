@@ -38,7 +38,7 @@ void test_template_context_initialization() {
     ctx.state = TemplateRenderState::COMPLETE;
     TEST_ASSERT_TRUE_MESSAGE(ctx.isComplete(), "Should be complete when state is COMPLETE");
     ctx.state = TemplateRenderState::ERROR;
-    TEST_ASSERT_TRUE_MESSAGE(ctx.isComplete(), "Should be complete when state is ERROR");
+    TEST_ASSERT_FALSE_MESSAGE(ctx.isComplete(), "An error must not report successful completion");
     
     // Test hasError
     ctx.state = TemplateRenderState::TEXT;
@@ -310,7 +310,7 @@ void test_template_context_state() {
     TEST_ASSERT_TRUE_MESSAGE(ctx.isComplete(), "COMPLETE should be complete");
     
     ctx.state = TemplateRenderState::ERROR;
-    TEST_ASSERT_TRUE_MESSAGE(ctx.isComplete(), "ERROR should be complete");
+    TEST_ASSERT_FALSE_MESSAGE(ctx.isComplete(), "ERROR should not be complete");
     
     // Test hasError for all states
     ctx.state = TemplateRenderState::TEXT;

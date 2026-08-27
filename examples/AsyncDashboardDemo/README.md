@@ -17,6 +17,8 @@ pio run -d examples/AsyncDashboardDemo -e dashboard_esp32
 
 ## Run
 
+See the shared [examples guide](../README.md) and [async web guidance](../../docs/ASYNC_WEB.md).
+
 1. Flash your target board (`pio run -d examples/AsyncDashboardDemo -e <env> -t upload --upload-port <port>`).
 2. Open the serial monitor at 115200 baud to confirm the SoftAP credentials.
 3. Connect to the advertised network and browse to `http://192.168.4.1/`. The captive portal should automatically redirect; if not, navigate manually.

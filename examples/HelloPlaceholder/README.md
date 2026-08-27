@@ -13,5 +13,7 @@ pio run -d examples/HelloPlaceholder -e example_esp8266
 pio run -d examples/HelloPlaceholder -e example_esp32
 ```
 
+See the shared [examples guide](../README.md) and [quickstart](../../docs/GETTING_STARTED.md).
+
 Flash the firmware and open the serial monitor at 115200 baud to see the rendered text.
 

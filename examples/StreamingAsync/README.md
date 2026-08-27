@@ -11,6 +11,8 @@ Small ESPAsyncWebServer demo that exposes a captive portal over a SoftAP and ren
 
 ```
 pio run -d examples/StreamingAsync -e example_esp8266
+
+See the shared [examples guide](../README.md) and [async web guidance](../../docs/ASYNC_WEB.md).
 pio run -d examples/StreamingAsync -e example_esp32
 ```
 
