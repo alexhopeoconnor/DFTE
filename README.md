@@ -59,6 +59,8 @@ Read the [documentation index](docs/README.md) for template syntax, async web re
 ## Development and releases
 
 ```bash
+./scripts/bump-version.sh vMAJOR.MINOR.PATCH
+# Replace the generated CHANGELOG TODO with the release summary.
 ./scripts/test.sh compile --platform esp8266
 ./scripts/test.sh compile --platform esp32
 ./scripts/check-docs.sh

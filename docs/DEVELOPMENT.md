@@ -2,9 +2,11 @@
 
 Released applications should use a public Git tag. While changing DFTE with a sibling library, select a local `symlink://` or `file://` dependency from an ignored PlatformIO override rather than changing tracked application dependencies.
 
-Before a release, update `library.json`, `CHANGELOG.md`, and the relevant guides, then run:
+Start a release with `bump-version.sh`. It updates package metadata and canonical installation snippets, then creates the changelog section. Replace its generated TODO with the release summary and update any behavioural documentation before running:
 
 ```bash
+./scripts/bump-version.sh vMAJOR.MINOR.PATCH
+# Replace the generated CHANGELOG TODO with the release summary.
 ./scripts/check-docs.sh
 ./scripts/test.sh compile --platform esp8266
 ./scripts/test.sh compile --platform esp32

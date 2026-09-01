@@ -32,12 +32,30 @@ if ! grep -q "^## ${version}$" "$root/CHANGELOG.md"; then
     exit 1
 fi
 
+if awk -v heading="## $version" '
+    $0 == heading { found = 1; next }
+    found && /^## / { exit }
+    found { print }
+' "$root/CHANGELOG.md" | grep -Fq 'TODO: Describe this release.'; then
+    echo "CHANGELOG.md still has the generated TODO for $version" >&2
+    exit 1
+fi
+repo_url="https://github.com/alexhopeoconnor/DFTE.git"
+validate_reference() {
+    local file="$1"
+    local reference_count
+    reference_count="$(grep -F "$repo_url#v" "$root/$file" | wc -l)"
+    [[ "$reference_count" -eq 1 ]] || { echo "$file must contain exactly one canonical release reference" >&2; exit 1; }
+    grep -Fq "$repo_url#$tag" "$root/$file" || { echo "$file does not reference $tag" >&2; exit 1; }
+}
+validate_reference README.md
+
 git -C "$root" diff --check
 
 package_dir="$(mktemp -d)"
 trap 'rm -rf "$package_dir"' EXIT
 pio pkg pack "$root" --output "$package_dir/package.tar.gz" >/dev/null
-echo "Validated PlatformIO package for $tag"
+echo "Validated release metadata and PlatformIO package for $tag"
 
 if [[ "${2:-}" == "--tag" ]]; then
     git -C "$root" diff --quiet
