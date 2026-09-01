@@ -16,11 +16,9 @@
   #define DFTE_BUFFER_SIZE_DEFAULT 512
 #endif
 
-#ifndef DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT
-  #define DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT 24
-#endif
-
-// Layout-affecting settings must be supplied through build-wide DFTE_* flags.
+// These are default capacities for a general-purpose standalone context. A
+// caller can select smaller per-context capacities when its template topology
+// is known, without changing the public object layout across translation units.
 #ifndef DFTE_MAX_STACK_DEPTH
   #define DFTE_MAX_STACK_DEPTH DFTE_MAX_STACK_DEPTH_DEFAULT
 #endif
@@ -43,20 +41,26 @@ public:
     // Context state
     State state;
     
-    // Unified rendering stack
+    // Standalone defaults retained for callers that use the no-argument
+    // constructor and for tests that exercise the maximum supported depth.
     static constexpr int MAX_RENDERING_DEPTH = DFTE_MAX_STACK_DEPTH;
-    RenderingContext renderingStack[MAX_RENDERING_DEPTH];
+    static const size_t BUFFER_SIZE = DFTE_BUFFER_SIZE;
+
+    // Per-context storage avoids layout-affecting build flags. This also lets
+    // constrained applications request only the stack and read buffer they
+    // actually need for a specific response.
+    RenderingContext* renderingStack;
+    size_t maxRenderingDepth;
     int renderingDepth;
     
     // Current placeholder being built (only valid during BUILDING_PLACEHOLDER state)
-    // Allocated to configured size - matches CONFIG_templatePlaceholderNameSize when DeviceFramework is present
-    char placeholderName[DFTE_PLACEHOLDER_NAME_SIZE];
+    // Fixed ABI-stable placeholder token storage.
+    char placeholderName[DFTE_PLACEHOLDER_NAME_CAPACITY];
     size_t placeholderPos;
     
     // Centralized buffer management
-    // Allocated to configured size - matches CONFIG_templateBufferSize when DeviceFramework is present
-    static const size_t BUFFER_SIZE = DFTE_BUFFER_SIZE;
-    uint8_t readBuffer[BUFFER_SIZE];
+    uint8_t* readBuffer;
+    size_t readBufferSize;
     size_t bufferPos;
     size_t bufferLen;
     size_t bufferOffset;
@@ -68,9 +72,17 @@ public:
     size_t totalBytesProcessed;
     unsigned long startTime;
     
-    DeviceFrameworkTemplateContext();
+    explicit DeviceFrameworkTemplateContext(
+        size_t maxDepth = MAX_RENDERING_DEPTH,
+        size_t bufferSize = BUFFER_SIZE);
     ~DeviceFrameworkTemplateContext();
+    DeviceFrameworkTemplateContext(const DeviceFrameworkTemplateContext&) = delete;
+    DeviceFrameworkTemplateContext& operator=(const DeviceFrameworkTemplateContext&) = delete;
     void reset();
+
+    bool isReady() const { return renderingStack != nullptr && readBuffer != nullptr; }
+    size_t getMaxRenderingDepth() const { return maxRenderingDepth; }
+    size_t getBufferSize() const { return readBufferSize; }
     
     // Unified stack management methods
     bool pushContext(RenderingContextType type, const char* name);

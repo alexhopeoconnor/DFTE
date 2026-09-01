@@ -3,18 +3,9 @@
 
 #include <Arduino.h>
 
-// Fallback defaults when DeviceFrameworkConfig is not available (standalone usage)
-// Always use internal macro names (DFTE_*) to avoid conflicts with DeviceFrameworkConfig extern declarations
-#ifndef DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT
-  #define DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT 24
-#endif
-
-// Layout-affecting settings must be passed as build-wide DFTE_* flags so every
-// translation unit sees the same object layout. DeviceFramework runtime config is
-// intentionally not used for fixed-size storage.
-#ifndef DFTE_PLACEHOLDER_NAME_SIZE
-  #define DFTE_PLACEHOLDER_NAME_SIZE DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT
-#endif
+// Placeholder-name storage has a fixed, ABI-stable capacity.
+// DFTE_PLACEHOLDER_NAME_SIZE overrides are intentionally ignored.
+static constexpr size_t DFTE_PLACEHOLDER_NAME_CAPACITY = 24;
 
 /**
  * Placeholder types for template substitution
@@ -82,7 +73,7 @@ struct ConditionalDescriptor {
  */
 struct PlaceholderEntry {
     // Allocated to configured size - matches CONFIG_templatePlaceholderNameSize when DeviceFramework is present
-    char name[DFTE_PLACEHOLDER_NAME_SIZE];
+    char name[DFTE_PLACEHOLDER_NAME_CAPACITY];
     PlaceholderType type;
     const void* data;
     PlaceholderLengthGetter getLength;

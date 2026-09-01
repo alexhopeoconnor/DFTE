@@ -47,14 +47,14 @@ void loop() {
 
 ```ini
 lib_deps =
-    DeviceFrameworkTemplateEngine=https://github.com/alexhopeoconnor/DFTE.git#v1.0.2
+    DeviceFrameworkTemplateEngine=https://github.com/alexhopeoconnor/DFTE.git#v1.1.0
 ```
 
 PlatformIO checks out the Git ref after `#`; GitHub Release assets are unrelated. DFTE’s supported release targets are ESP8266 and ESP32.
 
 ## Documentation
 
-Read the [documentation index](docs/README.md) for template syntax, async web responses, ABI-safe build flags, examples, tests, and releases.
+Read the [documentation index](docs/README.md) for template syntax, async web responses, per-context memory sizing, examples, tests, and releases.
 
 ## Development and releases
 

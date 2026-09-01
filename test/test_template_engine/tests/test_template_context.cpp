@@ -19,6 +19,27 @@ void test_template_context_initialization() {
     TEST_ASSERT_EQUAL_MESSAGE(0, ctx.bufferPos, "Initial bufferPos should be 0");
     TEST_ASSERT_EQUAL_MESSAGE(0, ctx.bufferLen, "Initial bufferLen should be 0");
     TEST_ASSERT_NULL_MESSAGE(ctx.registry, "Initial registry should be null");
+    TEST_ASSERT_TRUE_MESSAGE(ctx.isReady(), "Default context storage should allocate");
+    TEST_ASSERT_EQUAL_UINT32(TemplateContext::MAX_RENDERING_DEPTH, ctx.getMaxRenderingDepth());
+    TEST_ASSERT_EQUAL_UINT32(TemplateContext::BUFFER_SIZE, ctx.getBufferSize());
+
+    TemplateContext constrained(3, 64);
+    TEST_ASSERT_TRUE_MESSAGE(constrained.isReady(), "Constrained context storage should allocate");
+    TEST_ASSERT_EQUAL_UINT32(3, constrained.getMaxRenderingDepth());
+    TEST_ASSERT_EQUAL_UINT32(64, constrained.getBufferSize());
+    TEST_ASSERT_TRUE_MESSAGE(constrained.pushContext(RenderingContextType::TEMPLATE, "%ONE%"),
+        "First constrained stack frame should fit");
+    TEST_ASSERT_TRUE_MESSAGE(constrained.pushContext(RenderingContextType::TEMPLATE, "%TWO%"),
+        "Second constrained stack frame should fit");
+    TEST_ASSERT_TRUE_MESSAGE(constrained.pushContext(RenderingContextType::TEMPLATE, "%THREE%"),
+        "Third constrained stack frame should fit");
+    TEST_ASSERT_FALSE_MESSAGE(constrained.pushContext(RenderingContextType::TEMPLATE, "%FOUR%"),
+        "A constrained context must reject stack overflow");
+    TEST_ASSERT_TRUE_MESSAGE(constrained.hasError(), "Constrained stack overflow should be reported");
+
+    TemplateContext invalid(0, 64);
+    TEST_ASSERT_FALSE_MESSAGE(invalid.isReady(), "A zero-depth context must fail safely");
+    TEST_ASSERT_TRUE_MESSAGE(invalid.hasError(), "An invalid context must report an error");
     
     // Test reset
     ctx.pushContext(RenderingContextType::TEMPLATE, "TEST");

@@ -1,6 +1,6 @@
 {
   "name": "DeviceFrameworkTemplateEngine",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Memory-efficient streaming template engine for ESP8266/ESP32 with chunked rendering support. Designed for embedded web interfaces with PROGMEM template support.",
   "keywords": [
     "template",

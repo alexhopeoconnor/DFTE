@@ -10,10 +10,6 @@
 // When DeviceFrameworkConfig is included, extern variables are declared with CONFIG_* names
 // We use DFTE_* internal names for compile-time constants (constexpr) and default parameter values
 // NEVER define CONFIG_* macros here to avoid conflicts with extern declarations in DeviceFrameworkConfig
-#ifndef DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT
-  #define DFTE_PLACEHOLDER_NAME_SIZE_DEFAULT 24
-#endif
-
 #ifndef DFTE_MAX_PLACEHOLDERS_DEFAULT
   #define DFTE_MAX_PLACEHOLDERS_DEFAULT 16
 #endif
@@ -119,7 +115,7 @@ public:
     static size_t getDynamicTemplateLength(const DynamicTemplateDescriptor* descriptor, const char* templateData);
     
 private:
-    static constexpr uint16_t MAX_PLACEHOLDER_NAME_SIZE = DFTE_PLACEHOLDER_NAME_SIZE;
+    static constexpr uint16_t MAX_PLACEHOLDER_NAME_SIZE = DFTE_PLACEHOLDER_NAME_CAPACITY;
     
     PlaceholderEntry* placeholders;  // Dynamically allocated array
     uint16_t maxPlaceholders;        // Configurable size

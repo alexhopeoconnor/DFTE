@@ -1,14 +1,26 @@
 #include "DeviceFrameworkTemplateContext.h"
 #include "DeviceFrameworkTemplateEngineDebug.h"
+#include <new>
 
-DeviceFrameworkTemplateContext::DeviceFrameworkTemplateContext() 
-    : state(TemplateRenderState::TEXT), renderingDepth(0), placeholderPos(0),
-      bufferPos(0), bufferLen(0), bufferOffset(0),
-      registry(nullptr),
+DeviceFrameworkTemplateContext::DeviceFrameworkTemplateContext(size_t maxDepth, size_t bufferSize)
+    : state(TemplateRenderState::TEXT), renderingStack(nullptr), maxRenderingDepth(maxDepth),
+      renderingDepth(0), placeholderPos(0), readBuffer(nullptr), readBufferSize(bufferSize),
+      bufferPos(0), bufferLen(0), bufferOffset(0), registry(nullptr),
       totalBytesProcessed(0), startTime(0) {
     memset(placeholderName, 0, sizeof(placeholderName));
-    for (int i = 0; i < MAX_RENDERING_DEPTH; ++i) {
-        renderingStack[i] = RenderingContext();
+    if (maxRenderingDepth == 0 || readBufferSize == 0) {
+        state = TemplateRenderState::ERROR;
+        return;
+    }
+
+    renderingStack = new (std::nothrow) RenderingContext[maxRenderingDepth];
+    readBuffer = new (std::nothrow) uint8_t[readBufferSize];
+    if (!isReady()) {
+        delete[] renderingStack;
+        delete[] readBuffer;
+        renderingStack = nullptr;
+        readBuffer = nullptr;
+        state = TemplateRenderState::ERROR;
     }
 }
 
@@ -16,9 +28,16 @@ DeviceFrameworkTemplateContext::~DeviceFrameworkTemplateContext() {
     while (renderingDepth > 0) {
         popContext();
     }
+    delete[] readBuffer;
+    delete[] renderingStack;
 }
 
 void DeviceFrameworkTemplateContext::reset() {
+    if (!isReady()) {
+        state = TemplateRenderState::ERROR;
+        return;
+    }
+
     // An interrupted render may own an iterator handle. Pop through the stack
     // before overwriting it so every descriptor receives its close callback.
     while (renderingDepth > 0) {
@@ -34,14 +53,14 @@ void DeviceFrameworkTemplateContext::reset() {
     totalBytesProcessed = 0;
     startTime = millis();
     memset(placeholderName, 0, sizeof(placeholderName));
-    for (int i = 0; i < MAX_RENDERING_DEPTH; ++i) {
+    for (size_t i = 0; i < maxRenderingDepth; ++i) {
         renderingStack[i] = RenderingContext();
     }
 }
 
 // Unified stack management methods
 bool DeviceFrameworkTemplateContext::pushContext(RenderingContextType type, const char* name) {
-    if (renderingDepth >= MAX_RENDERING_DEPTH) {
+    if (!isReady() || static_cast<size_t>(renderingDepth) >= maxRenderingDepth) {
         DFTE_LOG_ERROR("Rendering stack overflow! Depth=" + String(renderingDepth));
         state = TemplateRenderState::ERROR;
         return false;
@@ -195,6 +214,11 @@ String DeviceFrameworkTemplateContext::getStackTrace() const {
 }
 
 bool DeviceFrameworkTemplateContext::refillBuffer() {
+    if (!isReady()) {
+        state = TemplateRenderState::ERROR;
+        return false;
+    }
+
     RenderingContext* currentCtx = getCurrentContext();
     if (!currentCtx || currentCtx->type != RenderingContextType::TEMPLATE) {
         return false;
@@ -205,7 +229,7 @@ bool DeviceFrameworkTemplateContext::refillBuffer() {
         return false;
     }
     
-    bufferLen = min(BUFFER_SIZE, templateCtx.templateLen - templateCtx.position);
+    bufferLen = min(readBufferSize, templateCtx.templateLen - templateCtx.position);
     
     if (bufferLen > 0) {
         if (templateCtx.isProgmem) {
