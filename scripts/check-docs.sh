@@ -25,4 +25,21 @@ while IFS= read -r -d '' markdown; do
     done < <(sed -nE 's/.*\]\(([^ )]+)( "[^"]*")?\).*/\1/p' "$markdown")
 done < <(find "$root" -path "$root/.git" -prune -o -path '*/.pio' -prune -o -name '*.md' -type f -print0)
 
+while IFS= read -r example; do
+    for required in README.md platformio.ini; do
+        [[ -f "$example/$required" ]] || { echo "Incomplete example: ${example#$root/} is missing $required" >&2; exit 1; }
+    done
+    find "$example/src" -type f \( -name '*.ino' -o -name '*.cpp' \) -print -quit | grep -q . || {
+        echo "Incomplete example: ${example#$root/} has no source" >&2
+        exit 1
+    }
+done < <(find "$root/examples" -mindepth 2 -maxdepth 2 -type f -name platformio.ini -printf '%h\n' | sort)
+
+while IFS= read -r markdown; do
+    (( $(grep -Ec '^[[:space:]]*```' "$markdown") % 2 == 0 )) || {
+        echo "Unclosed code fence in ${markdown#$root/}" >&2
+        exit 1
+    }
+done < <(find "$root" -path "$root/.git" -prune -o -path '*/.pio' -prune -o -name '*.md' -type f -print)
+
 echo "Documentation links and required files passed"
