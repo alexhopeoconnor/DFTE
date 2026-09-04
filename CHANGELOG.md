@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.0
+
+- Add a borrowed async-response helper for fixed, caller-owned response slots. It avoids a per-request `shared_ptr` control allocation while releasing the slot safely on completion or disconnect.
+- Add callback-enabled safe shared response helpers so dynamic contexts can return a bounded owner permit at the same time as their shared state is released.
+
 ## 1.1.0
 
 - Replace layout-affecting compile-time storage overrides with per-context,
