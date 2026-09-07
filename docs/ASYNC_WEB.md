@@ -2,6 +2,11 @@
 
 Build a `PlaceholderRegistry` once during setup, but allocate a fresh `TemplateContext` for each request. A shared context would mix rendering state when clients overlap.
 
+| Need | Use |
+| --- | --- |
+| A request-owned dynamic render context | `beginSafeTemplateResponse()` |
+| A fixed response-slot pool owned by the application | `beginBorrowedChunkedResponse()` |
+
 ```cpp
 #include <TemplateEngine.h>
 #include <TemplateEngineAsyncWeb.h>

@@ -1,4 +1,4 @@
-# DFTE documentation
+# DeviceFramework Template Engine (DFTE) documentation
 
 | I want to… | Read |
 | --- | --- |

@@ -1,4 +1,4 @@
-# Device Framework Template Engine
+# DeviceFramework Template Engine (DFTE)
 
 DFTE streams HTML and text from ESP8266 and ESP32 firmware without constructing a complete response in RAM. Store layouts in PROGMEM, resolve changing values through getters, and render fixed-size chunks directly to serial or an asynchronous HTTP response.
 
@@ -49,7 +49,7 @@ Build [Hello Placeholder](examples/HelloPlaceholder/) to see the rendered result
 
 ```ini
 lib_deps =
-    DeviceFrameworkTemplateEngine=https://github.com/alexhopeoconnor/DFTE.git#v1.2.0
+    DeviceFrameworkTemplateEngine=https://github.com/alexhopeoconnor/DFTE.git#v1.2.1
 ```
 
 PlatformIO checks out the Git ref after `#`; GitHub Release assets are unrelated. DFTE supports ESP8266 and ESP32 Arduino projects.

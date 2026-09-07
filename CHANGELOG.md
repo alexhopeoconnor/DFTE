@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1
+
+- Clarify the safe shared-response and fixed-slot borrowed-response helpers so
+  embedded web clients can choose the ownership model that matches their
+  response lifetime.
+- Refresh the package documentation and canonical PlatformIO installation tag.
+
 ## 1.2.0
 
 - Add a borrowed async-response helper for fixed, caller-owned response slots. It avoids a per-request `shared_ptr` control allocation while releasing the slot safely on completion or disconnect.
