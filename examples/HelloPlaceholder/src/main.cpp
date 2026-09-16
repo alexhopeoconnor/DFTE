@@ -37,15 +37,19 @@ void setup() {
   while (!TemplateRenderer::isComplete(ctx) && !TemplateRenderer::hasError(ctx)) {
     size_t written = TemplateRenderer::renderNextChunk(ctx, buffer, sizeof(buffer));
     if (!written) {
+      Serial.println(F("\nRendering stalled before completion."));
       break;
     }
     Serial.write(buffer, written);
   }
 
-  Serial.println(F("\nRendering complete."));
+  if (TemplateRenderer::hasError(ctx)) {
+    Serial.println(F("\nRendering failed."));
+  } else if (TemplateRenderer::isComplete(ctx)) {
+    Serial.println(F("\nRendering complete."));
+  }
 }
 
 void loop() {
   // Nothing else to do in the basic example.
 }
-

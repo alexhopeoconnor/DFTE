@@ -1,6 +1,6 @@
 # Async web responses
 
-Build a `PlaceholderRegistry` once during setup, but allocate a fresh `TemplateContext` for each request. A shared context would mix rendering state when clients overlap.
+Build a `PlaceholderRegistry` once during setup, but allocate a fresh `TemplateContext` for each request. A shared context would mix rendering state when clients overlap. The handler below assumes setup has populated the long-lived `registry`; see [StreamingAsync](../examples/StreamingAsync/) for the complete project.
 
 | Need | Use |
 | --- | --- |
@@ -17,8 +17,8 @@ void sendTemplate(AsyncWebServerRequest* request, const char* root) {
     auto context = std::make_shared<TemplateContext>();
     context->setRegistry(registry.get());
     TemplateRenderer::initializeContext(*context, root);
-    request->onDisconnect([context]() mutable { context.reset(); });
 
+    // The helper retains the request-owned context until the response completes or disconnects.
     AsyncWebServerResponse* response =
         TemplateEngineAsyncWeb::beginSafeTemplateResponse(
             request, "text/html; charset=utf-8", context, 128
@@ -36,12 +36,15 @@ Use `beginBorrowedChunkedResponse()` when the application already owns a small, 
 ```cpp
 struct ResponseSlot {
     bool busy = false;
+    uint32_t lease = 0;
     TemplateContext context;
 };
 
 ResponseSlot slots[2];
 
-void releaseSlot(ResponseSlot& slot) {
+void releaseSlot(ResponseSlot& slot, uint32_t lease) {
+    // A completed response can disconnect after this slot has been reused.
+    if (!slot.busy || slot.lease != lease) return;
     slot.context.reset();
     slot.busy = false;
 }
@@ -60,6 +63,7 @@ void sendBoundedTemplate(AsyncWebServerRequest* request, const char* root) {
     }
 
     slot->busy = true;
+    const uint32_t lease = ++slot->lease;
     slot->context.setRegistry(registry.get());
     TemplateRenderer::initializeContext(slot->context, root);
     request->send(TemplateEngineAsyncWeb::beginBorrowedChunkedResponse(
@@ -71,11 +75,11 @@ void sendBoundedTemplate(AsyncWebServerRequest* request, const char* root) {
         [](const ResponseSlot& state) {
             return TemplateEngineAsyncWeb::isTemplateTerminal(state.context);
         },
-        releaseSlot));
+        [lease](ResponseSlot& state) { releaseSlot(state, lease); }));
 }
 ```
 
-Use this form only while the slot itself has static or otherwise guaranteed lifetime. Use the `shared_ptr` form above for a request-owned dynamic context.
+Use this form only while the slot itself has static or otherwise guaranteed lifetime. The lease makes a late disconnect from an old response a no-op after the slot has been reused. Use the `shared_ptr` form above for a request-owned dynamic context.
 
 Use [StreamingAsync](../examples/StreamingAsync/) for a complete SoftAP/captive-portal project.
 

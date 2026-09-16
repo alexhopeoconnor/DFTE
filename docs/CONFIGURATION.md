@@ -5,10 +5,14 @@ stack and read buffer at runtime, so choosing capacities cannot make a consumer
 and the compiled library disagree about object size.
 
 ```cpp
-TemplateContext standard;          // default: 16 stack frames, 512-byte buffer
-TemplateContext pageContext(6, 128); // known shallow response, smaller allocation
-if (!pageContext.isReady()) {
-    // Allocation failed; do not start a response with this context.
+// Keep each context alive for the full response that uses it.
+TemplateContext standard;            // Default: 16 stack frames, 512-byte buffer.
+TemplateContext pageContext(6, 128); // Known shallow response, smaller allocation.
+
+void setup() {
+    if (!standard.isReady() || !pageContext.isReady()) {
+        // Allocation failed; do not start a response with either context.
+    }
 }
 ```
 

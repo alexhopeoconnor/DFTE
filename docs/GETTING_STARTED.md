@@ -27,11 +27,15 @@ void setup() {
 }
 
 void loop() {
-    uint8_t chunk[128];
-    if (!TemplateRenderer::isComplete(context) && !TemplateRenderer::hasError(context)) {
-        const size_t written = TemplateRenderer::renderNextChunk(context, chunk, sizeof(chunk));
-        Serial.write(chunk, written);
+    if (TemplateRenderer::hasError(context)) {
+        // Report the invalid root or placeholder once in production, then stop this response.
+        return;
     }
+    if (TemplateRenderer::isComplete(context)) return;
+
+    uint8_t chunk[128];
+    const size_t written = TemplateRenderer::renderNextChunk(context, chunk, sizeof(chunk));
+    if (written > 0) Serial.write(chunk, written);
 }
 ```
 
