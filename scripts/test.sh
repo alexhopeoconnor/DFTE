@@ -2,25 +2,26 @@
 set -euo pipefail
 
 usage() {
-    echo "Usage: $0 compile|examples|packages --platform esp8266|esp32|esp32_3_3_11" >&2
+    echo "Usage: $0 compile|examples --platform esp8266|esp32" >&2
     exit 2
 }
 
-[[ $# -eq 3 && ( "${1:-}" == "compile" || "${1:-}" == "examples" || "${1:-}" == "packages" ) && "${2:-}" == "--platform" ]] || usage
+[[ $# -eq 3 && ( "${1:-}" == "compile" || "${1:-}" == "examples" ) && "${2:-}" == "--platform" ]] || usage
 case "${3:-}" in
-    esp8266|esp32|esp32_3_3_11) platform="$3" ;;
+    esp8266|esp32) platform="$3" ;;
     *) usage ;;
 esac
 
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 pio_for_platform() {
-    if [[ "$platform" != "esp32_3_3_11" ]]; then
+    if [[ "$platform" != "esp32" ]]; then
         pio "$@"
         return
     fi
 
-    # Arduino-ESP32 Core 3.3.11 uses a package-form uploader. Isolate its Core-managed
-    # Python environment from the legacy 3.0.5 tool-esptoolpy graph.
+    # Keep the maintained Core 3.3.11 package-form uploader in one persistent,
+    # repository-owned cache. This avoids unrelated global package metadata;
+    # it is never cleared by this script.
     local core_dir packages_dir cache_dir
     core_dir="${DFTE_PLATFORMIO_CORE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/dfte-platformio/core-3.3.11}"
     packages_dir="${DFTE_PLATFORMIO_PACKAGES_DIR:-$core_dir/packages}"
@@ -31,16 +32,11 @@ pio_for_platform() {
 }
 
 case "$1" in
-compile|packages)
+compile)
     case "$platform" in
         esp8266) test_environment="test_template_engine_8266" ;;
         esp32) test_environment="test_template_engine_esp32" ;;
-        esp32_3_3_11) test_environment="test_template_engine_esp32_3_3_11" ;;
     esac
-    if [[ "$1" == "packages" ]]; then
-        pio_for_platform pkg list -d "$root" -e "$test_environment"
-        exit 0
-    fi
     pio_for_platform test -d "$root" -e "$test_environment" --without-uploading --without-testing
     echo "DFTE compile check passed for $platform"
     exit 0

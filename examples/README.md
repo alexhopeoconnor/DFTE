@@ -10,11 +10,9 @@ pio device monitor -d examples/HelloPlaceholder -e example_esp8266
 
 Choose the corresponding ESP32 environment where provided. The examples use the checked-out DFTE source, so they double as practical integration checks for this repository.
 
-The normal `example_esp32` / `dashboard_esp32` environments retain the
-Arduino-ESP32 3.0.5 compatibility lane. Repository CI also builds the matching
-`*_esp32_3_3_11` environments against the current Arduino-ESP32 3.3.11
-validation baseline. A consuming application should select and pin its own
-complete PlatformIO platform stack.
+The `example_esp32` / `dashboard_esp32` environments use Arduino-ESP32 3.3.11.
+A consuming application should select and pin its own complete PlatformIO
+platform stack.
 
 | Example | Start here when you want to… |
 | --- | --- |
