@@ -23,7 +23,7 @@ pio_for_platform() {
     # repository-owned cache. This avoids unrelated global package metadata;
     # it is never cleared by this script.
     local core_dir packages_dir cache_dir
-    core_dir="${DFTE_PLATFORMIO_CORE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/dfte-platformio/core-3.3.11}"
+    core_dir="${DFTE_PLATFORMIO_CORE_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/arduino-framework-platformio/core-3.3.11}"
     packages_dir="${DFTE_PLATFORMIO_PACKAGES_DIR:-$core_dir/packages}"
     cache_dir="${DFTE_PLATFORMIO_CACHE_DIR:-$core_dir/cache}"
     install -d -m 700 "$core_dir" "$packages_dir" "$cache_dir"

@@ -23,11 +23,12 @@ note](https://github.com/alexhopeoconnor/arduino-home-assistant/blob/main/docs/E
 For the pioarduino release-to-Core mapping and cache-collision diagnosis, see
 [DeviceFramework's toolchain guide](https://github.com/alexhopeoconnor/DeviceFramework/blob/main/docs/TOOLCHAINS.md).
 
-`./scripts/test.sh` keeps the ESP32 lane in a dedicated persistent PlatformIO
-Core/cache directory by default:
-`${XDG_CACHE_HOME:-$HOME/.cache}/dfte-platformio/core-3.3.11`. That prevents a
-stale global `tool-esptoolpy` installation from shadowing the current pioarduino
-uploader. Override it with `DFTE_PLATFORMIO_CORE_DIR`,
+`./scripts/test.sh` uses the persistent PlatformIO Core/cache shared by the
+maintained framework repositories:
+`${XDG_CACHE_HOME:-$HOME/.cache}/arduino-framework-platformio/core-3.3.11`.
+All maintained ESP32 lanes pin this exact graph, avoiding repeated downloads
+while keeping stale global `tool-esptoolpy` metadata from shadowing the current
+pioarduino uploader. Override it with `DFTE_PLATFORMIO_CORE_DIR`,
 `DFTE_PLATFORMIO_PACKAGES_DIR`, and `DFTE_PLATFORMIO_CACHE_DIR` for another
 disk; the script never clears that cache or pins one compiler separately.
 
